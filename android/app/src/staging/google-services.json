@@ -1,0 +1,46 @@
+{
+  "project_info": {
+    "project_number": "651515565301",
+    "project_id": "fytlyf-staging-test",
+    "storage_bucket": "fytlyf-staging-test.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:651515565301:android:97ea950e2231abca68e1bc",
+        "android_client_info": {
+          "package_name": "com.fytlyf.appt"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "651515565301-7pk5khahlkipes6so6s04o3nk2lvdtr5.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC9-kghSQnJObsBy0tOLHY5dv6cae2hGaU"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "651515565301-7pk5khahlkipes6so6s04o3nk2lvdtr5.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "651515565301-1ib60k7d6tk378ib9551s1qitfua30n3.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.fytlyf.appt"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -1,4 +1,4 @@
-package com.fytlyf.fytlyf
+package com.fytlyf.app
 
 import io.flutter.embedding.android.FlutterActivity
 
