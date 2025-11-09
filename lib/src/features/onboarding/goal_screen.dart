@@ -7,7 +7,6 @@ import 'package:go_router/go_router.dart';
 import 'package:fytlyf/src/features/onboarding/onboarding_controller.dart';
 import 'package:fytlyf/src/features/onboarding/age_screen.dart';
 import 'package:fytlyf/src/features/onboarding/gender_screen.dart';
-import 'package:fytlyf/src/features/auth/view/auth_entry_screen.dart';
 import 'widgets/onboarding_header.dart';
 
 class GoalScreen extends ConsumerStatefulWidget {
@@ -172,14 +171,14 @@ class _GoalScreenState extends ConsumerState<GoalScreen> {
           boxShadow: [
             if (isSelected)
               BoxShadow(
-                color: const Color(0xFFFF6D00).withOpacity(0.4),
+                color: const Color(0xFFFF6D00).withValues(alpha: 0.4),
                 blurRadius: 18,
                 spreadRadius: 2,
                 offset: const Offset(0, 10),
               )
             else
               BoxShadow(
-                color: Colors.black.withOpacity(0.06),
+                color: Colors.black.withValues(alpha: 0.06),
                 blurRadius: 6,
                 offset: const Offset(0, 2),
               ),

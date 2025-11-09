@@ -184,14 +184,14 @@ class _ExperienceScreenState extends ConsumerState<ExperienceScreen> {
           boxShadow: [
             if (isSelected)
               BoxShadow(
-                color: const Color(0xFFFF6D00).withOpacity(0.4),
+                color: const Color(0xFFFF6D00).withValues(alpha: 0.4),
                 blurRadius: 18,
                 spreadRadius: 2,
                 offset: const Offset(0, 10),
               )
             else
               BoxShadow(
-                color: Colors.black.withOpacity(0.06),
+                color: Colors.black.withValues(alpha: 0.06),
                 blurRadius: 6,
                 offset: const Offset(0, 2),
               ),

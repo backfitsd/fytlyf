@@ -5,9 +5,6 @@ import 'package:go_router/go_router.dart';
 
 // Local imports
 import 'onboarding_controller.dart';
-import 'goal_screen.dart';
-import '../auth/view/auth_entry_screen.dart';
-import '../welcome/welcome_screen.dart';
 import 'widgets/onboarding_header.dart'; // ✅ new reusable header
 
 class GenderScreen extends ConsumerStatefulWidget {

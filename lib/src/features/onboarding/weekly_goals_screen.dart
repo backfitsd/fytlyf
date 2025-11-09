@@ -146,14 +146,14 @@ class _WeeklyGoalsScreenState extends ConsumerState<WeeklyGoalsScreen> {
                         boxShadow: [
                           if (isSelected)
                             BoxShadow(
-                              color: const Color(0xFFFF6D00).withOpacity(0.40),
+                              color: const Color(0xFFFF6D00).withValues(alpha: 0.40),
                               blurRadius: 18,
                               spreadRadius: 2,
                               offset: const Offset(0, 10),
                             )
                           else
                             BoxShadow(
-                              color: Colors.black.withOpacity(0.06),
+                              color: Colors.black.withValues(alpha: 0.06),
                               blurRadius: 6,
                               offset: const Offset(0, 2),
                             ),
@@ -217,7 +217,7 @@ class _WeeklyGoalsScreenState extends ConsumerState<WeeklyGoalsScreen> {
                     ? Colors.grey
                     : const Color(0xFFFF3D00),
                 elevation: selectedDays == null ? 0 : 4,
-                shadowColor: Colors.redAccent.withOpacity(0.4),
+                shadowColor: Colors.redAccent.withValues(alpha: 0.4),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(20),
                 ),

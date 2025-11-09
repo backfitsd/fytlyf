@@ -281,9 +281,9 @@ class _AuthEntryScreenState extends State<AuthEntryScreen>
       color: Colors.black87,
     );
 
-    Widget? _usernameSuffix;
+    Widget? usernameSuffix;
     if (_checkingUsername) {
-      _usernameSuffix = SizedBox(
+      usernameSuffix = SizedBox(
         width: 20,
         height: 20,
         child: Center(
@@ -297,10 +297,10 @@ class _AuthEntryScreenState extends State<AuthEntryScreen>
         ),
       );
     } else if (_usernameAvailable == true) {
-      _usernameSuffix =
+      usernameSuffix =
       const Icon(Icons.check_circle, color: Colors.green, size: 25);
     } else if (_usernameAvailable == false) {
-      _usernameSuffix =
+      usernameSuffix =
       const Icon(Icons.cancel, color: Colors.red, size: 25);
     }
 
@@ -399,7 +399,7 @@ class _AuthEntryScreenState extends State<AuthEntryScreen>
                                     prefixIcon: const Icon(
                                         Icons.person_outline,
                                         color: Colors.deepOrange),
-                                    suffixIcon: _usernameSuffix,
+                                    suffixIcon: usernameSuffix,
                                     border: InputBorder.none,
                                     contentPadding:
                                     const EdgeInsets.symmetric(
@@ -656,7 +656,8 @@ class _GradientButton extends StatelessWidget {
           borderRadius: BorderRadius.circular(20),
           boxShadow: [
             BoxShadow(
-              color: Colors.deepOrange.withOpacity(0.3),
+              color: Colors.deepOrange.withValues(alpha: 0.3),
+
               blurRadius: 10,
               offset: const Offset(0, 5),
             ),

@@ -1,5 +1,4 @@
 // --- file: lib/src/features/onboarding/progress_graph_screen.dart ---
-import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -71,7 +70,7 @@ class _ProgressGraphScreenState extends ConsumerState<ProgressGraphScreen>
                 textAlign: TextAlign.center,
                 style: GoogleFonts.roboto(
                   fontSize: 14 * scale,
-                  color: Colors.black.withOpacity(0.65),
+                  color: Colors.black.withValues(alpha: 0.65),
                 ),
               ),
               SizedBox(height: 24 * scale),
@@ -93,7 +92,7 @@ class _ProgressGraphScreenState extends ConsumerState<ProgressGraphScreen>
                   borderRadius: BorderRadius.circular(22 * scale),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.deepOrangeAccent.withOpacity(0.25),
+                      color: Colors.deepOrangeAccent.withValues(alpha: 0.25),
                       blurRadius: 20 * scale,
                       offset: Offset(0, 8 * scale),
                     ),
@@ -155,7 +154,7 @@ class _ProgressGraphScreenState extends ConsumerState<ProgressGraphScreen>
                       borderRadius: BorderRadius.circular(14 * scale),
                     ),
                     elevation: 4,
-                    shadowColor: Colors.redAccent.withOpacity(0.4),
+                    shadowColor: Colors.redAccent.withValues(alpha: 0.4),
                   ),
                   child: Text(
                     "START YOUR JOURNEY",
@@ -219,7 +218,7 @@ class _ProgressGraphScreenState extends ConsumerState<ProgressGraphScreen>
           Text(
             label,
             style: GoogleFonts.roboto(
-              color: Colors.white.withOpacity(0.95),
+              color: Colors.white.withValues(alpha: 0.95),
               fontSize: 14,
               fontWeight: FontWeight.bold,
             ),
@@ -278,7 +277,7 @@ class _ProgressGraphScreenState extends ConsumerState<ProgressGraphScreen>
               borderRadius: BorderRadius.circular(22 * scale),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.06),
+                  color: Colors.black.withValues(alpha: 0.6),
                   blurRadius: 10 * scale,
                   offset: Offset(0, 4 * scale),
                 ),
@@ -298,7 +297,7 @@ class _ProgressGraphScreenState extends ConsumerState<ProgressGraphScreen>
                   style: GoogleFonts.poppins(
                     fontSize: 13 * scale,
                     fontWeight: FontWeight.w700,
-                    color: Colors.black.withOpacity(0.9),
+                    color: Colors.black.withValues(alpha: 0.9),
                   ),
                 ),
               ],
