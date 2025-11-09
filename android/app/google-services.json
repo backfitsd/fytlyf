@@ -1,0 +1,54 @@
+{
+  "project_info": {
+    "project_number": "431911773857",
+    "project_id": "fytlyf-production-realtime",
+    "storage_bucket": "fytlyf-production-realtime.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:431911773857:android:63c9238dea48ee2f49f2e0",
+        "android_client_info": {
+          "package_name": "com.fytlyf.fytlyf"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "431911773857-1o3h7mang4esaglu91vm8s1f49at0g98.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.fytlyf.fytlyf",
+            "certificate_hash": "c1f8640257971162e979cf5aa945d4b8babdaa82"
+          }
+        },
+        {
+          "client_id": "431911773857-cg91q2fgl4ir8ni869p325dnbmd4uf8e.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCTO-Qo0y_4jlgcXEvxsAvTlwd_URJqS5M"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "431911773857-cg91q2fgl4ir8ni869p325dnbmd4uf8e.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "431911773857-26rq66a5pq1ee98dnuiq22b1i1fepqs8.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.fytlyf.fytlyf"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

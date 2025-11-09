@@ -1,0 +1,136 @@
+// ----------------------------
+// ✅ FIRESTORE SECURITY RULES
+// ✅ FYT LYF — FINAL VERSION
+// ----------------------------
+
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ---------- Helper functions ----------
+    function isAuth() {
+      return request.auth != null;
+    }
+
+    function isOwner(uid) {
+      return isAuth() && request.auth.uid == uid;
+    }
+
+    // username: a–z, 0–9, dot, underscore; 4–20 chars; lowercase only
+    function validUsername(u) {
+      return u.size() >= 4 &&
+             u.size() <= 20 &&
+             u.matches('^[a-z0-9._]+$');
+    }
+
+    // ======================================
+    // ✅ USERNAME COLLECTION
+    // Path: usernames/{username}
+    // ======================================
+    match /usernames/{username} {
+
+      // Everyone can read to check availability
+      allow read: if true;
+
+      // Create rules:
+      // - Must be authenticated
+      // - Must match the username pattern
+      // - Document must not already exist
+      // - Only allowed fields: uid, createdAt
+      allow create: if isAuth()
+        && validUsername(username)
+        && request.resource.data.keys().hasOnly(['uid','createdAt'])
+        && request.resource.data.uid == request.auth.uid
+        && !exists(/databases/$(database)/documents/usernames/$(username));
+
+      // Nobody can update username documents (immutable)
+      allow update: if false;
+
+      // Delete allowed only for owner (in rare cases)
+      allow delete: if isAuth() && resource.data.uid == request.auth.uid;
+    }
+
+
+    // ======================================
+    // ✅ USERS COLLECTION
+    // Path: users/{uid}
+    // ======================================
+    match /users/{uid} {
+
+      // Only owner can read their own profile
+      allow read: if isOwner(uid);
+
+      // Create & update validation:
+      // - Owner only
+      // - Allowed keys only
+      // - username must be lowercase & valid format
+      allow create, update: if isOwner(uid)
+        && request.resource.data.keys().hasOnly([
+          'uid',
+          'email',
+          'displayName',
+          'username',
+          'createdAt',
+          'onboarding'
+        ])
+        && request.resource.data.uid == request.auth.uid
+        && (
+          // username optional, BUT if present it must be valid
+          !('username' in request.resource.data)
+          || validUsername(request.resource.data.username)
+        );
+
+      allow delete: if isOwner(uid);
+
+      // ======================================
+      // ✅ OPTIONAL SUBCOLLECTION: onboarding
+      // users/{uid}/onboarding/{doc}
+      // ======================================
+      match /onboarding/{docId} {
+        allow read, write: if isOwner(uid);
+      }
+    }
+  }
+}
+// Firestore Security Rules for FYT LYF
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ✅ Users can read/write their own profile
+    match /users/{uid} {
+      allow read, write: if request.auth != null
+                         && request.auth.uid == uid;
+    }
+
+    // ✅ Username reservation system
+    match /usernames/{uname} {
+      allow read: if true;
+
+      // Allow creating/updating a username doc only if:
+      // - user is logged in
+      // - and they write their own UID into the username doc
+      allow create, update: if request.auth != null
+            && request.resource.data.uid == request.auth.uid;
+
+      // Prevent deletion from client
+      allow delete: if false;
+    }
+
+    // ✅ Pending users (for email verification cleanup)
+    match /pending_users/{uid} {
+      allow read, write: if request.auth != null
+                         && request.auth.uid == uid;
+
+      // Prevent deletion by client
+      allow delete: if false;
+    }
+
+    // ✅ Allow reads everywhere else, but no writes by clients
+    match /{document=**} {
+      allow read: if true;
+      allow write: if false;
+    }
+  }
+}

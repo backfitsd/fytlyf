@@ -1,0 +1,77 @@
+name: fytlyf
+description: "A professional adaptive fitness & lifestyle Flutter app."
+publish_to: 'none'
+
+version: 1.0.0+1
+
+environment:
+  sdk: ">=3.9.0 <4.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # -------------------- Firebase Core Suite --------------------
+  firebase_core: ^4.2.0
+  firebase_auth: ^6.1.1
+  cloud_firestore: ^6.0.3
+  firebase_storage: ^13.0.3
+  cloud_functions: ^6.0.3
+  firebase_messaging: ^16.0.3
+  firebase_crashlytics: ^5.0.3
+  firebase_remote_config: ^6.1.0
+  firebase_analytics: ^12.0.3
+
+  # -------------------- Authentication & APIs --------------------
+  google_sign_in: 6.2.1
+  http: ^1.2.2
+
+  # -------------------- Notifications --------------------
+  flutter_local_notifications: ^19.5.0
+
+  # -------------------- State Management & Routing --------------------
+  flutter_riverpod: 2.5.1
+  go_router: ^16.3.0
+
+  # -------------------- UI / Adaptive Design --------------------
+  flutter_screenutil: ^5.9.3
+  flutter_svg: ^2.0.10+1
+  lottie: ^3.3.2
+  fl_chart: ^1.1.1
+  shimmer: ^3.0.0
+  cached_network_image: ^3.4.1
+  animations: ^2.0.11
+  flutter_animate: ^4.5.0
+  carousel_slider: ^4.2.1
+
+  # -------------------- Local Storage & Utilities --------------------
+  hive: ^2.2.3
+  hive_flutter: ^1.1.0
+  flutter_secure_storage: ^9.2.2
+  shared_preferences: ^2.3.2
+  connectivity_plus: ^7.0.0
+  intl: ^0.20.2
+  uuid: ^4.5.0
+
+  # -------------------- Icons & Styling --------------------
+  cupertino_icons: ^1.0.8
+  material_design_icons_flutter: ^7.0.7296
+  google_fonts: ^6.3.2
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+  build_runner: ^2.4.12
+  hive_generator: ^2.0.1
+  lucide_icons: ^0.257.0
+
+flutter:
+  uses-material-design: true
+
+  assets:
+    - assets/images/splash.png
+    - assets/images/welcome_bg.png
+    - assets/images/male.png
+    - assets/images/female.png
+    - assets/images/logo.png
