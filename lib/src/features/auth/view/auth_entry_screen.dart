@@ -289,29 +289,17 @@ class _AuthEntryScreenState extends State<AuthEntryScreen> with TickerProviderSt
     final gradientHeight = screenH * 0.35;
     final cardWidth = screenW * 0.9;
 
-    Widget? usernameSuffix;
+    Widget? _usernameSuffix;
     if (_checkingUsername) {
-<<<<<<< HEAD
       _usernameSuffix = const SizedBox(
-=======
-      usernameSuffix = SizedBox(
->>>>>>> 065980a7c479c2d4d399547d5fc0e0eb99f64f7f
         width: 20,
         height: 20,
         child: CircularProgressIndicator(strokeWidth: 2.4, color: Color(0xFF9E9E9E)),
       );
     } else if (_usernameAvailable == true) {
-<<<<<<< HEAD
       _usernameSuffix = const Icon(Icons.check_circle, color: Colors.green, size: 22);
     } else if (_usernameAvailable == false) {
       _usernameSuffix = const Icon(Icons.cancel, color: Colors.redAccent, size: 22);
-=======
-      usernameSuffix =
-      const Icon(Icons.check_circle, color: Colors.green, size: 25);
-    } else if (_usernameAvailable == false) {
-      usernameSuffix =
-      const Icon(Icons.cancel, color: Colors.red, size: 25);
->>>>>>> 065980a7c479c2d4d399547d5fc0e0eb99f64f7f
     }
 
     return GestureDetector(
@@ -342,10 +330,9 @@ class _AuthEntryScreenState extends State<AuthEntryScreen> with TickerProviderSt
                         gradient: LinearGradient(colors: [Color(0xFFFF3D00), Color(0xFFFF6D00), Color(0xFFFFA726)], begin: Alignment.topLeft, end: Alignment.bottomRight),
                         borderRadius: BorderRadius.only(bottomLeft: Radius.circular(40), bottomRight: Radius.circular(40)),
                       ),
-<<<<<<< HEAD
                       child: Column(
                         children: [
-                          const SizedBox(height: 75),
+                          const SizedBox(height: 65),
                           Text("FYT LYF", style: GoogleFonts.pottaOne(fontSize: 48, color: Colors.white, fontWeight: FontWeight.bold)),
                           const SizedBox(height: 8),
                           Text("FEEL YOUR TRANSFORMATION", style: GoogleFonts.poppins(fontSize: 14, color: Colors.white, fontWeight: FontWeight.w600)),
@@ -359,102 +346,6 @@ class _AuthEntryScreenState extends State<AuthEntryScreen> with TickerProviderSt
                                 _clearError();
                                 setState(() => mode = m);
                               },
-=======
-                      const SizedBox(height: 12),
-                      Text("FEEL YOUR TRANSFORMATION", style: subtitleStyle),
-                      Text("LOVE YOUR FITNESS", style: subtitleStyle),
-                    ],
-                  ),
-                ),
-              ),
-
-              Align(
-                alignment: const Alignment(0, -0.25),
-                child: _GradientBorderHeader(
-                  active: mode,
-                  onSelect: (m) {
-                    _clearError();
-                    setState(() => mode = m);
-                  },
-                ),
-              ),
-
-              Align(
-                alignment: const Alignment(0, 0.08),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 28),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      if (mode == AuthMode.signup) ...[
-                        const SizedBox(height: 55),
-                        AnimatedBuilder(
-                          animation: _gradientCtrl,
-                          builder: (context, child) {
-                            final shift = (1 - _gradientCtrl.value) * 0.6;
-                            return Container(
-                              width: MediaQuery.of(context).size.width * 0.8,
-                              decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(20),
-                                gradient: LinearGradient(
-                                  colors: const [
-                                    Color(0xFFFF3D00),
-                                    Color(0xFFFFA726),
-                                  ],
-                                  begin: Alignment(-shift, 0),
-                                  end: Alignment(shift, 0),
-                                ),
-                              ),
-                              padding: const EdgeInsets.all(2),
-                              child: Container(
-                                decoration: BoxDecoration(
-                                  color: Colors.white,
-                                  borderRadius: BorderRadius.circular(18),
-                                ),
-                                child: TextFormField(
-                                  controller: _username,
-                                  onChanged: _onUsernameChanged,
-                                  onTap: _clearError,
-                                  style: GoogleFonts.poppins(
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                  decoration: InputDecoration(
-                                    hintText: "Choose a username",
-                                    hintStyle: GoogleFonts.poppins(
-                                      color: Colors.grey.shade500,
-                                      fontWeight: FontWeight.w500,
-                                    ),
-                                    prefixIcon: const Icon(
-                                        Icons.person_outline,
-                                        color: Colors.deepOrange),
-                                    suffixIcon: usernameSuffix,
-                                    border: InputBorder.none,
-                                    contentPadding:
-                                    const EdgeInsets.symmetric(
-                                        vertical: 18, horizontal: 16),
-                                  ),
-                                ),
-                              ),
-                            );
-                          },
-                        ),
-
-                        // --- Consistent spacing block ---
-                        AnimatedContainer(
-                          duration: const Duration(milliseconds: 250),
-                          curve: Curves.easeOutCubic,
-                          height: _usernameMessage != null ? 32 : 22,
-                          alignment: Alignment.center,
-                          child: _usernameMessage != null
-                              ? Text(
-                            _usernameMessage!,
-                            style: GoogleFonts.poppins(
-                              color: _usernameAvailable == true
-                                  ? Colors.green
-                                  : Colors.redAccent,
-                              fontWeight: FontWeight.w600,
-                              fontSize: 13,
->>>>>>> 065980a7c479c2d4d399547d5fc0e0eb99f64f7f
                             ),
                           ),
                         ],
@@ -816,41 +707,10 @@ class _GradientButton extends StatelessWidget {
     return GestureDetector(
       onTap: loading ? null : onTap,
       child: Container(
-<<<<<<< HEAD
         width: MediaQuery.of(context).size.width * 0.78,
         height: 54,
         decoration: BoxDecoration(gradient: gradient, borderRadius: BorderRadius.circular(18), boxShadow: [BoxShadow(color: Colors.deepOrange.withOpacity(0.22), blurRadius: 10, offset: const Offset(0, 5))]),
         child: Center(child: loading ? const CircularProgressIndicator(color: Colors.white, strokeWidth: 2) : Text(text, style: GoogleFonts.poppins(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 16))),
-=======
-        width: MediaQuery.of(context).size.width * 0.8,
-        height: 55,
-        decoration: BoxDecoration(
-          gradient: gradient,
-          borderRadius: BorderRadius.circular(20),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.deepOrange.withValues(alpha: 0.3),
-
-              blurRadius: 10,
-              offset: const Offset(0, 5),
-            ),
-          ],
-        ),
-        child: Center(
-          child: loading
-              ? const CircularProgressIndicator(
-              color: Colors.white, strokeWidth: 2)
-              : Text(
-            text,
-            style: GoogleFonts.poppins(
-              color: Colors.white,
-              fontWeight: FontWeight.w700,
-              fontSize: 16,
-              letterSpacing: 0.3,
-            ),
-          ),
-        ),
->>>>>>> 065980a7c479c2d4d399547d5fc0e0eb99f64f7f
       ),
     );
   }
