@@ -1,6 +1,9 @@
 import 'dart:async';
 import 'dart:math';
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:google_sign_in/google_sign_in.dart';
+import 'package:go_router/go_router.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -25,6 +28,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
   void dispose() {
     _greetingTimer?.cancel();
     super.dispose();
+  }
+
+  // ✅ Logout function (Firebase + Google + go to /auth-entry)
+  Future<void> _logoutAndGoToAuth() async {
+    try {
+      await FirebaseAuth.instance.signOut();
+      await GoogleSignIn().signOut();
+    } catch (_) {}
+    if (!mounted) return;
+    context.go('/auth-entry');
   }
 
   void _startGreetingUpdater() {
@@ -143,8 +156,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             color: Colors.black87)),
                   ]),
                   const SizedBox(width: 12),
-                  const Icon(Icons.notifications_none_rounded,
-                      color: Colors.black54),
+
+                  // ✅ Logout on tap of Notifications icon
+                  GestureDetector(
+                    onTap: _logoutAndGoToAuth,
+                    child: const Icon(Icons.notifications_none_rounded,
+                        color: Colors.black54),
+                  ),
+
                   const SizedBox(width: 12),
                   const Icon(Icons.settings_outlined, color: Colors.black54),
                 ])
