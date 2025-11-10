@@ -201,7 +201,7 @@ class _AgeScreenState extends ConsumerState<AgeScreen> {
 }
 
 class _SelectionOverlay extends StatelessWidget {
-  const _SelectionOverlay({super.key});
+  const _SelectionOverlay();
 
   @override
   Widget build(BuildContext context) {

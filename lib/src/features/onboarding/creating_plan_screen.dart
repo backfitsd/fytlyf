@@ -100,7 +100,6 @@ class _CreatingPlanScreenState extends ConsumerState<CreatingPlanScreen>
     super.dispose();
   }
 
-  /// 🔥 Red–Orange–Saffron Gradient (Dynamic blend)
   LinearGradient _animatedGradient(double t) {
     final colors = [
       Color.lerp(const Color(0xFFFF0000), const Color(0xFFFF6D00), t * 0.8)!,
@@ -118,15 +117,23 @@ class _CreatingPlanScreenState extends ConsumerState<CreatingPlanScreen>
     final size = MediaQuery.of(context).size;
 
     int activeSteps = 0;
-    if (progress >= 100) activeSteps = 5;
-    else if (progress >= 90) activeSteps = 5;
-    else if (progress >= 70) activeSteps = 4;
-    else if (progress >= 50) activeSteps = 3;
-    else if (progress >= 30) activeSteps = 2;
-    else if (progress >= 10) activeSteps = 1;
+    if (progress >= 100) {
+      activeSteps = 5;
+    } else if (progress >= 90) {
+      activeSteps = 5;
+    } else if (progress >= 70) {
+      activeSteps = 4;
+    } else if (progress >= 50) {
+      activeSteps = 3;
+    } else if (progress >= 30) {
+      activeSteps = 2;
+    } else if (progress >= 10) {
+      activeSteps = 1;
+    }
 
-    return WillPopScope(
-      onWillPop: () async => false,
+    return PopScope(
+      canPop: false,
+      onPopInvoked: (didPop) {},
       child: Scaffold(
         backgroundColor: Colors.white,
         body: Stack(
@@ -169,7 +176,6 @@ class _CreatingPlanScreenState extends ConsumerState<CreatingPlanScreen>
                           return Stack(
                             alignment: Alignment.center,
                             children: [
-                              // 🔥 Energy halo (faint glow)
                               if (halo > 0)
                                 Container(
                                   width: 250 + 120 * pulse,
@@ -178,16 +184,13 @@ class _CreatingPlanScreenState extends ConsumerState<CreatingPlanScreen>
                                     shape: BoxShape.circle,
                                     gradient: RadialGradient(
                                       colors: [
-                                        const Color(0xFFFF5722)
-                                            .withOpacity(0.3 * (1 - pulse / 2)),
+                                        const Color(0xFFFF5722).withValues(alpha: 0.3 * (1 - pulse / 2)),
                                         Colors.transparent
                                       ],
                                       stops: const [0.4, 1.0],
                                     ),
                                   ),
                                 ),
-
-                              // 🔥 Center circle with light shimmer
                               Transform.scale(
                                 scale: 1 + sin(mergeValue * pi) * 0.25,
                                 child: Stack(
@@ -201,14 +204,13 @@ class _CreatingPlanScreenState extends ConsumerState<CreatingPlanScreen>
                                         gradient: gradient,
                                         boxShadow: [
                                           BoxShadow(
-                                            color: const Color(0xFFFF3D00).withOpacity(0.45),
+                                            color: const Color(0xFFFF3D00).withValues(alpha: 0.45),
                                             blurRadius: 30,
                                             spreadRadius: 7,
                                           )
                                         ],
                                       ),
                                     ),
-                                    // Shimmer overlay sweep
                                     ClipOval(
                                       child: ShaderMask(
                                         shaderCallback: (rect) {
@@ -216,9 +218,9 @@ class _CreatingPlanScreenState extends ConsumerState<CreatingPlanScreen>
                                             begin: Alignment(-1 + shimmerX, -1),
                                             end: Alignment(shimmerX, 1),
                                             colors: [
-                                              Colors.white.withOpacity(0.0),
-                                              Colors.white.withOpacity(0.4),
-                                              Colors.white.withOpacity(0.0),
+                                              Colors.white.withValues(alpha: 0.0),
+                                              Colors.white.withValues(alpha: 0.4),
+                                              Colors.white.withValues(alpha: 0.0),
                                             ],
                                             stops: const [0.2, 0.5, 0.8],
                                           ).createShader(rect);
@@ -249,8 +251,6 @@ class _CreatingPlanScreenState extends ConsumerState<CreatingPlanScreen>
                                   ],
                                 ),
                               ),
-
-                              // 🔥 Orbiting step circles
                               ...List.generate(activeSteps, (index) {
                                 final angle = (index / steps.length) * 2 * pi - pi / 2;
                                 const radius = 120.0;
@@ -270,8 +270,6 @@ class _CreatingPlanScreenState extends ConsumerState<CreatingPlanScreen>
                                   ),
                                 );
                               }),
-
-                              // ✅ Final checkmark with gradient fill
                               if (halo > 0)
                                 Transform.scale(
                                   scale: 0.8 + pulse * 0.3,
@@ -333,7 +331,7 @@ class _StepBlock extends StatelessWidget {
             gradient: gradient,
             boxShadow: [
               BoxShadow(
-                color: const Color(0xFFFF3D00).withOpacity(0.25),
+                color: const Color(0xFFFF3D00).withValues(alpha: 0.25),
                 blurRadius: 10,
                 spreadRadius: 1,
               ),
@@ -372,7 +370,7 @@ class _ParticlePainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    final paint = Paint()..color = const Color(0xFFFFAB91).withOpacity(0.15);
+    final paint = Paint()..color = const Color(0xFFFFAB91).withValues(alpha: 0.15);
     for (int i = 0; i < particleCount; i++) {
       final dx = _rand.nextDouble() * size.width;
       final dy = _rand.nextDouble() * size.height;

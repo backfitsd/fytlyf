@@ -293,12 +293,12 @@ class _AnimatedGradientBmiCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: gradientColors.first.withOpacity(0.35),
+            color: gradientColors.first.withValues(alpha: 0.35),
             blurRadius: 14,
             offset: const Offset(0, 6),
           ),
         ],
-        border: Border.all(color: Colors.white.withOpacity(0.25), width: 1.2),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.25), width: 1.2),
       ),
       child: Row(
         children: [
@@ -309,7 +309,7 @@ class _AnimatedGradientBmiCard extends StatelessWidget {
               shape: BoxShape.circle,
               gradient: LinearGradient(
                 colors: [
-                  accentColor.withOpacity(0.7),
+                  accentColor.withValues(alpha: 0.7),
                   accentColor,
                 ],
                 begin: Alignment.topLeft,
@@ -317,7 +317,7 @@ class _AnimatedGradientBmiCard extends StatelessWidget {
               ),
               boxShadow: [
                 BoxShadow(
-                  color: accentColor.withOpacity(0.4),
+                  color: accentColor.withValues(alpha: 0.4),
                   blurRadius: 10,
                   offset: const Offset(0, 4),
                 ),
@@ -343,7 +343,7 @@ class _AnimatedGradientBmiCard extends StatelessWidget {
                   style: GoogleFonts.poppins(
                     fontSize: 13,
                     fontWeight: FontWeight.w500,
-                    color: Colors.white.withOpacity(0.9),
+                    color: Colors.white.withValues(alpha: 0.9),
                   ),
                 ),
                 const SizedBox(height: 2),
@@ -360,7 +360,7 @@ class _AnimatedGradientBmiCard extends StatelessWidget {
                   subtitle,
                   style: GoogleFonts.roboto(
                     fontSize: 13,
-                    color: Colors.white.withOpacity(0.9),
+                    color: Colors.white.withValues(alpha: 0.9),
                   ),
                 ),
               ],
@@ -374,7 +374,7 @@ class _AnimatedGradientBmiCard extends StatelessWidget {
 
 // ✅ Gradient picker overlay identical to AgeScreen
 class _SelectionOverlay extends StatelessWidget {
-  const _SelectionOverlay({super.key});
+  const _SelectionOverlay();
 
   @override
   Widget build(BuildContext context) {
