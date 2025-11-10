@@ -1,10 +1,12 @@
-// --- AUTH ENTRY (FYT LYF FINAL - STATIC LOGIN + ANIMATED SIGNUP) ---
-// Fully functional backend + fixed layout, adaptive to all screen sizes.
+// --- AUTH ENTRY (FYT LYF FINAL - ERRORS: VIBRATE + SHAKE + GRADIENT CHECKBOX) ---
+// Ready to paste: lib/src/features/auth/view/auth_entry_screen.dart
 
 import 'dart:async';
+import 'dart:math' as math;
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart'; // for HapticFeedback
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -23,10 +25,12 @@ class AuthEntryScreen extends StatefulWidget {
 }
 
 class _AuthEntryScreenState extends State<AuthEntryScreen> with TickerProviderStateMixin {
+  // mode & input
   AuthMode mode = AuthMode.login;
   final TextEditingController _username = TextEditingController();
   final FocusNode _usernameFocus = FocusNode();
 
+  // backend + state
   bool _loading = false;
   String? _error;
   bool _checkingUsername = false;
@@ -35,16 +39,30 @@ class _AuthEntryScreenState extends State<AuthEntryScreen> with TickerProviderSt
   Timer? _debounce;
 
   bool _termsAccepted = false;
-  String? _termsError;
+  bool _termsErrorVisible = false; // toggles visual red highlight
 
-  final _users = FirebaseFirestore.instance.collection('users');
-  final _usernames = FirebaseFirestore.instance.collection('usernames');
+  // firebase typed collections
+  final CollectionReference<Map<String, dynamic>> _users = FirebaseFirestore.instance
+      .collection('users')
+      .withConverter<Map<String, dynamic>>(fromFirestore: (snap, _) => snap.data() ?? <String, dynamic>{}, toFirestore: (v, _) => v);
+  final CollectionReference<Map<String, dynamic>> _usernames = FirebaseFirestore.instance
+      .collection('usernames')
+      .withConverter<Map<String, dynamic>>(fromFirestore: (snap, _) => snap.data() ?? <String, dynamic>{}, toFirestore: (v, _) => v);
 
+  // animations
   late final AnimationController _gradientCtrl;
   late final AnimationController _headerEntryCtrl;
+
+  // shake controllers for message & terms row
+  late final AnimationController _shakeMsgCtrl;
+  late final AnimationController _shakeTermsCtrl;
+
   late final ValueNotifier<bool> _showError;
 
   static final _usernameReg = RegExp(r'^[a-z0-9._]{4,20}$');
+
+  // constant spacing used equally above & below
+  static const double _messageGap = 12.0;
 
   @override
   void initState() {
@@ -53,6 +71,10 @@ class _AuthEntryScreenState extends State<AuthEntryScreen> with TickerProviderSt
 
     _gradientCtrl = AnimationController(vsync: this, duration: const Duration(seconds: 3))..repeat(reverse: true);
     _headerEntryCtrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 600));
+
+    _shakeMsgCtrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 520));
+    _shakeTermsCtrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 520));
+
     _showError = ValueNotifier(false);
 
     _usernameFocus.addListener(() {
@@ -68,6 +90,8 @@ class _AuthEntryScreenState extends State<AuthEntryScreen> with TickerProviderSt
   void dispose() {
     _gradientCtrl.dispose();
     _headerEntryCtrl.dispose();
+    _shakeMsgCtrl.dispose();
+    _shakeTermsCtrl.dispose();
     _showError.dispose();
     _username.dispose();
     _usernameFocus.dispose();
@@ -75,20 +99,37 @@ class _AuthEntryScreenState extends State<AuthEntryScreen> with TickerProviderSt
     super.dispose();
   }
 
+  // central error setter — triggers vibration + shake
+  void _setError(String? msg) {
+    setState(() => _error = msg);
+    _showError.value = msg != null && msg.isNotEmpty;
+    if (msg != null && msg.isNotEmpty) {
+      _vibrate();
+      _playShake(_shakeMsgCtrl);
+    }
+  }
+
   void _clearError() {
-    if (_error != null || _usernameMessage != null || _termsError != null) {
+    if (_error != null || _usernameMessage != null || _termsErrorVisible) {
       setState(() {
         _error = null;
         _showError.value = false;
         _usernameMessage = null;
-        _termsError = null;
+        _termsErrorVisible = false;
       });
     }
   }
 
-  void _setError(String? msg) {
-    setState(() => _error = msg);
-    _showError.value = msg != null && msg.isNotEmpty;
+  Future<void> _vibrate() async {
+    try {
+      HapticFeedback.vibrate();
+    } catch (_) {}
+  }
+
+  void _playShake(AnimationController ctrl) {
+    try {
+      ctrl.forward(from: 0.0);
+    } catch (_) {}
   }
 
   OnboardingDraft _readOnboarding() {
@@ -126,7 +167,7 @@ class _AuthEntryScreenState extends State<AuthEntryScreen> with TickerProviderSt
 
   Future<bool> _userDocExists(String uid) async {
     final snap = await _users.doc(uid).get();
-    return snap.exists;
+    return snap.exists && (snap.data()?.isNotEmpty ?? false);
   }
 
   Future<bool> _isUsernameFree(String uname) async {
@@ -134,17 +175,19 @@ class _AuthEntryScreenState extends State<AuthEntryScreen> with TickerProviderSt
     return !snap.exists;
   }
 
-  // Username validation logic
+  // ---------------- Username validation (user can type freely) ----------------
   void _onUsernameChanged(String raw) {
     String value = raw.toLowerCase().replaceAll(RegExp(r'\s+'), '');
     if (_username.text != value) {
       _username.value = TextEditingValue(text: value, selection: TextSelection.collapsed(offset: value.length));
     }
+
     setState(() {
       _usernameAvailable = null;
       _usernameMessage = null;
       _checkingUsername = true;
     });
+
     _debounce?.cancel();
 
     if (value.isEmpty) {
@@ -156,18 +199,61 @@ class _AuthEntryScreenState extends State<AuthEntryScreen> with TickerProviderSt
     }
 
     _debounce = Timer(const Duration(milliseconds: 600), () async {
-      if (value.length < 4) return _setValidation("Minimum 4 characters", false);
-      if (value.length > 20) return _setValidation("Maximum 20 characters", false);
-      if (!RegExp(r'^[a-z0-9._]+$').hasMatch(value)) return _setValidation("Only a–z, 0–9, . and _ allowed.", false);
-      if (value.startsWith('.') && value.endsWith('.')) return _setValidation("Cannot start and end with .", false);
-      if (value.startsWith('.')) return _setValidation("Cannot start with .", false);
-      if (value.endsWith('.')) return _setValidation("Cannot end with .", false);
-      if (value.contains('..')) return _setValidation("Consecutive dots are not allowed.", false);
-      if (value.contains('__')) return _setValidation("Consecutive underscores are not allowed.", false);
-      if (value.contains('._') || value.contains('_.')) return _setValidation("Input not allowed", false);
-      if ('.'.allMatches(value).length > 2) return _setValidation("Maximum 2 dots allowed.", false);
-      if ('_'.allMatches(value).length > 2) return _setValidation("Maximum 2 underscores allowed.", false);
+      // length
+      if (value.length < 4) {
+        _setValidation("Minimum 4 characters", false);
+        return;
+      }
+      if (value.length > 20) {
+        _setValidation("Maximum 20 characters", false);
+        return;
+      }
 
+      // allowed chars
+      if (!RegExp(r'^[a-z0-9._]+$').hasMatch(value)) {
+        _setValidation("Only a–z, 0–9, . and _ allowed.", false);
+        return;
+      }
+
+      // start/end with dot
+      if (value.startsWith('.') && value.endsWith('.')) {
+        _setValidation("Cannot start and end with .", false);
+        return;
+      } else if (value.startsWith('.')) {
+        _setValidation("Cannot start with .", false);
+        return;
+      } else if (value.endsWith('.')) {
+        _setValidation("Cannot end with .", false);
+        return;
+      }
+
+      // consecutive / combos
+      if (value.contains('..')) {
+        _setValidation("Consecutive dots are not allowed.", false);
+        return;
+      }
+      if (value.contains('__')) {
+        _setValidation("Consecutive underscores are not allowed.", false);
+        return;
+      }
+      if (value.contains('._') || value.contains('_.')) {
+        _setValidation("Input not allowed", false);
+        return;
+      }
+
+      // counts
+      final dotCount = '.'.allMatches(value).length;
+      final underscoreCount = '_'.allMatches(value).length;
+      if (dotCount > 2) {
+        _setValidation("Maximum 2 dots allowed.", false);
+        return;
+      }
+      if (underscoreCount > 2) {
+        _setValidation("Maximum 2 underscores allowed.", false);
+        return;
+      }
+
+      // backend availability
       try {
         final free = await _isUsernameFree(value);
         if (!mounted) return;
@@ -190,21 +276,29 @@ class _AuthEntryScreenState extends State<AuthEntryScreen> with TickerProviderSt
       _usernameAvailable = available;
       _usernameMessage = msg;
     });
+
+    // vibrate + shake message
+    _vibrate();
+    _playShake(_shakeMsgCtrl);
   }
 
-  // Google Login
+  // ---------------- Google Login / Signup ----------------
   Future<void> _googleLogin() async {
     _setError(null);
     setState(() => _loading = true);
     try {
       final googleSignIn = GoogleSignIn();
-      await googleSignIn.signOut();
+      await googleSignIn.signOut(); // ensure chooser appears
       final google = await googleSignIn.signIn();
-      if (google == null) return setState(() => _loading = false);
+      if (google == null) {
+        setState(() => _loading = false);
+        return;
+      }
       final auth = await google.authentication;
       final credential = GoogleAuthProvider.credential(idToken: auth.idToken, accessToken: auth.accessToken);
       final cred = await FirebaseAuth.instance.signInWithCredential(credential);
       final uid = cred.user!.uid;
+
       final exists = await _userDocExists(uid);
       if (!exists) {
         await FirebaseAuth.instance.signOut();
@@ -213,22 +307,36 @@ class _AuthEntryScreenState extends State<AuthEntryScreen> with TickerProviderSt
       }
       if (!mounted) return;
       context.go('/dashboard');
-    } catch (_) {
+    } on FirebaseAuthException catch (e) {
+      // specific Firebase auth errors -> show clearer messages
+      if (e.code == 'account-exists-with-different-credential' || e.code == 'email-already-in-use') {
+        _setError('This email is already registered with another sign-in method. Please use that method or reset password.');
+      } else if (e.code == 'user-disabled') {
+        _setError('This user account has been disabled.');
+      } else {
+        _setError(e.message ?? 'Authentication failed. Please try again.');
+      }
+    } catch (e) {
+      // generic
       _setError('Something went wrong.');
     } finally {
       if (mounted) setState(() => _loading = false);
     }
   }
 
-  // Google Signup
   Future<void> _googleSignup() async {
     final uname = _username.text.trim().toLowerCase();
+
+    // Terms validation: highlight visually + vibrate + shake
     if (!_termsAccepted) {
-      setState(() => _termsError = 'Please accept Terms & Conditions');
+      setState(() => _termsErrorVisible = true);
+      _vibrate();
+      _playShake(_shakeTermsCtrl);
       return;
     } else {
-      _termsError = null;
+      _termsErrorVisible = false;
     }
+
     if (!_usernameReg.hasMatch(uname) || _usernameAvailable != true) {
       _setError('Enter a valid and available username.');
       return;
@@ -244,26 +352,34 @@ class _AuthEntryScreenState extends State<AuthEntryScreen> with TickerProviderSt
       final googleSignIn = GoogleSignIn();
       await googleSignIn.signOut();
       final google = await googleSignIn.signIn();
-      if (google == null) return setState(() => _loading = false);
+      if (google == null) {
+        setState(() => _loading = false);
+        return;
+      }
       final auth = await google.authentication;
       final credential = GoogleAuthProvider.credential(idToken: auth.idToken, accessToken: auth.accessToken);
+
+      // try sign-in with credential
       final cred = await FirebaseAuth.instance.signInWithCredential(credential);
       final user = cred.user!;
       final uid = user.uid;
+
       if (await _userDocExists(uid)) {
         await FirebaseAuth.instance.signOut();
         _setError('This Google account is already registered.');
         return;
       }
+
       final unameRef = _usernames.doc(uname);
       if (!(await _isUsernameFree(uname))) {
         await FirebaseAuth.instance.signOut();
         _setError('Username taken. Try another.');
         return;
       }
+
       await FirebaseFirestore.instance.runTransaction((txn) async {
-        txn.set(unameRef, {'uid': uid});
-        txn.set(_users.doc(uid), {
+        txn.set(unameRef, <String, dynamic>{'uid': uid});
+        txn.set(_users.doc(uid), <String, dynamic>{
           'uid': uid,
           'email': user.email,
           'name': user.displayName,
@@ -272,22 +388,32 @@ class _AuthEntryScreenState extends State<AuthEntryScreen> with TickerProviderSt
           ..._onboardingToFirestore(),
         });
       });
+
       if (!mounted) return;
       context.go('/dashboard');
-    } catch (_) {
+    } on FirebaseAuthException catch (e) {
+      // handle cases where email already in use or account exists with different credential
+      if (e.code == 'account-exists-with-different-credential' || e.code == 'email-already-in-use') {
+        _setError('This email is already registered. Please login or use the original sign-in method.');
+      } else if (e.code == 'invalid-credential') {
+        _setError('Invalid credentials provided. Please try again.');
+      } else {
+        _setError(e.message ?? 'Authentication failed. Please try again.');
+      }
+    } catch (e) {
       _setError('Something went wrong. Please try again.');
     } finally {
       if (mounted) setState(() => _loading = false);
     }
   }
 
-  // UI
+  // ---------------- UI ----------------
   @override
   Widget build(BuildContext context) {
     final screenH = MediaQuery.of(context).size.height;
     final screenW = MediaQuery.of(context).size.width;
     final gradientHeight = screenH * 0.35;
-    final cardWidth = screenW * 0.9;
+    final cardWidth = screenW * 0.92;
 
     Widget? _usernameSuffix;
     if (_checkingUsername) {
@@ -302,6 +428,20 @@ class _AuthEntryScreenState extends State<AuthEntryScreen> with TickerProviderSt
       _usernameSuffix = const Icon(Icons.cancel, color: Colors.redAccent, size: 22);
     }
 
+    // shake transforms
+    Widget _buildShake({required AnimationController ctrl, required Widget child}) {
+      return AnimatedBuilder(
+        animation: ctrl,
+        builder: (c, w) {
+          // produce a small left-right sequence using a sinus curve
+          final t = ctrl.value;
+          final dx = math.sin(t * math.pi * 4) * 8.0 * (1 - t); // decaying
+          return Transform.translate(offset: Offset(dx, 0), child: w);
+        },
+        child: child,
+      );
+    }
+
     return GestureDetector(
       onTap: () {
         FocusScope.of(context).unfocus();
@@ -310,7 +450,7 @@ class _AuthEntryScreenState extends State<AuthEntryScreen> with TickerProviderSt
       behavior: HitTestBehavior.opaque,
       child: Scaffold(
         resizeToAvoidBottomInset: false,
-        backgroundColor: Colors.white,
+        backgroundColor: Colors.grey.shade50,
         body: Stack(
           children: [
             Column(
@@ -363,11 +503,9 @@ class _AuthEntryScreenState extends State<AuthEntryScreen> with TickerProviderSt
                     child: SizedBox(
                       width: cardWidth,
                       child: mode == AuthMode.signup
-                          ? AnimatedSwitcher(
-                        duration: const Duration(milliseconds: 360),
-                        switchInCurve: Curves.easeInOutCubicEmphasized,
-                        switchOutCurve: Curves.easeInOutCubicEmphasized,
-                        child: _SignupCard(
+                          ? _buildShake(
+                        ctrl: _shakeMsgCtrl,
+                        child: _SignupCardV2(
                           key: const ValueKey('signupCard'),
                           usernameController: _username,
                           usernameFocus: _usernameFocus,
@@ -378,22 +516,35 @@ class _AuthEntryScreenState extends State<AuthEntryScreen> with TickerProviderSt
                           onUsernameChanged: _onUsernameChanged,
                           onClearError: _clearError,
                           termsAccepted: _termsAccepted,
-                          termsError: _termsError,
+                          termsErrorVisible: _termsErrorVisible,
                           onTermsChanged: (v) => setState(() {
                             _termsAccepted = v ?? false;
-                            _termsError = null;
+                            _termsErrorVisible = false;
                           }),
                           onTermsOpen: () => _showTermsDialog(context),
-                          onGoogleSignup: _googleSignup,
+                          onGoogleSignup: () {
+                            // if terms missing — we shake terms specifically
+                            if (!_termsAccepted) {
+                              setState(() => _termsErrorVisible = true);
+                              _vibrate();
+                              _playShake(_shakeTermsCtrl);
+                              return;
+                            }
+                            _googleSignup();
+                          },
                           loading: _loading,
+                          messageGap: _messageGap,
+                          shakeTermsCtrl: _shakeTermsCtrl,
                         ),
                       )
-                          : _LoginCard(
+                          : _LoginCardV2(
                         key: const ValueKey('loginCard'),
-                        onGoogleLogin: _googleLogin,
+                        onGoogleLogin: () => _googleLogin(),
                         loading: _loading,
                         error: _error,
                         showError: _showError,
+                        messageGap: _messageGap,
+                        shakeMsgCtrl: _shakeMsgCtrl,
                       ),
                     ),
                   ),
@@ -422,7 +573,7 @@ class _AuthEntryScreenState extends State<AuthEntryScreen> with TickerProviderSt
     );
   }
 
-  // Terms dialog
+  // Terms dialog unchanged
   void _showTermsDialog(BuildContext ctx) {
     showDialog(
       context: ctx,
@@ -479,7 +630,9 @@ class _AuthEntryScreenState extends State<AuthEntryScreen> with TickerProviderSt
   }
 }
 
-// Capsule Header
+// ---------------- Components ----------------
+
+// Capsule Header (unchanged visually)
 class _CapsuleHeader extends StatelessWidget {
   final AuthMode mode;
   final Function(AuthMode) onSelect;
@@ -490,7 +643,6 @@ class _CapsuleHeader extends StatelessWidget {
     final isLogin = mode == AuthMode.login;
     final width = MediaQuery.of(context).size.width;
     final capsuleWidth = width * 0.72;
-    final tabWidth = capsuleWidth * 0.48;
 
     return Container(
       width: capsuleWidth,
@@ -503,14 +655,8 @@ class _CapsuleHeader extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          GestureDetector(
-            onTap: () => onSelect(AuthMode.login),
-            child: _tab("LOGIN", isLogin),
-          ),
-          GestureDetector(
-            onTap: () => onSelect(AuthMode.signup),
-            child: _tab("SIGN UP", !isLogin),
-          ),
+          GestureDetector(onTap: () => onSelect(AuthMode.login), child: _tab("LOGIN", isLogin)),
+          GestureDetector(onTap: () => onSelect(AuthMode.signup), child: _tab("SIGN UP", !isLogin)),
         ],
       ),
     );
@@ -522,28 +668,19 @@ class _CapsuleHeader extends StatelessWidget {
       width: 130,
       height: 44,
       decoration: BoxDecoration(
-        gradient: active
-            ? const LinearGradient(colors: [Color(0xFFFF3D00), Color(0xFFFF6D00)], begin: Alignment.topLeft, end: Alignment.bottomRight)
-            : null,
+        gradient: active ? const LinearGradient(colors: [Color(0xFFFF3D00), Color(0xFFFF6D00)], begin: Alignment.topLeft, end: Alignment.bottomRight) : null,
         color: active ? null : Colors.white.withOpacity(0.06),
         borderRadius: BorderRadius.circular(32),
         border: Border.all(color: Colors.white.withOpacity(active ? 0.0 : 0.6), width: active ? 0 : 1.0),
       ),
       alignment: Alignment.center,
-      child: Text(
-        text,
-        style: GoogleFonts.poppins(
-          color: Colors.white,
-          fontWeight: active ? FontWeight.w800 : FontWeight.w600,
-          fontSize: 15,
-        ),
-      ),
+      child: Text(text, style: GoogleFonts.poppins(color: Colors.white, fontWeight: active ? FontWeight.w800 : FontWeight.w600, fontSize: 15)),
     );
   }
 }
 
-// Signup Card
-class _SignupCard extends StatelessWidget {
+// --- Signup Card variant with gradient checkbox + equal gaps + shake hook ---
+class _SignupCardV2 extends StatelessWidget {
   final TextEditingController usernameController;
   final FocusNode usernameFocus;
   final Widget? usernameSuffix;
@@ -553,13 +690,15 @@ class _SignupCard extends StatelessWidget {
   final Function(String) onUsernameChanged;
   final VoidCallback onClearError;
   final bool termsAccepted;
-  final String? termsError;
+  final bool termsErrorVisible;
   final ValueChanged<bool?> onTermsChanged;
   final VoidCallback onTermsOpen;
   final VoidCallback onGoogleSignup;
   final bool loading;
+  final double messageGap;
+  final AnimationController shakeTermsCtrl;
 
-  const _SignupCard({
+  const _SignupCardV2({
     required Key key,
     required this.usernameController,
     required this.usernameFocus,
@@ -570,15 +709,43 @@ class _SignupCard extends StatelessWidget {
     required this.onUsernameChanged,
     required this.onClearError,
     required this.termsAccepted,
-    required this.termsError,
+    required this.termsErrorVisible,
     required this.onTermsChanged,
     required this.onTermsOpen,
     required this.onGoogleSignup,
     required this.loading,
+    required this.messageGap,
+    required this.shakeTermsCtrl,
   }) : super(key: key);
+
+  Widget _buildCheckbox(BuildContext ctx) {
+    // gradient when checked, red border when termsErrorVisible true
+    final gradient = const LinearGradient(colors: [Color(0xFFFF3D00), Color(0xFFFF6D00)], begin: Alignment.topLeft, end: Alignment.bottomRight);
+    return GestureDetector(
+      onTap: () => onTermsChanged(!termsAccepted),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 240),
+        width: 22,
+        height: 22,
+        decoration: BoxDecoration(
+          gradient: termsAccepted ? gradient : null,
+          color: termsAccepted ? null : Colors.white,
+          borderRadius: BorderRadius.circular(6),
+          border: Border.all(color: termsErrorVisible ? Colors.redAccent : (termsAccepted ? Colors.transparent : Colors.grey.shade400), width: 1.6),
+          boxShadow: termsAccepted ? [BoxShadow(color: Colors.orange.withOpacity(0.14), blurRadius: 8, offset: const Offset(0, 3))] : null,
+        ),
+        child: termsAccepted
+            ? const Icon(Icons.check, size: 16, color: Colors.white)
+            : const SizedBox.shrink(),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
+    final focused = usernameFocus.hasFocus;
+    final textStyle = termsErrorVisible ? GoogleFonts.poppins(color: Colors.redAccent) : GoogleFonts.poppins(color: Colors.black87);
+
     return Container(
       key: key,
       width: double.infinity,
@@ -586,52 +753,84 @@ class _SignupCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(22),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.08), blurRadius: 20, offset: const Offset(0, 10))],
+        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.06), blurRadius: 20, offset: const Offset(0, 8))],
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          TextFormField(
-            controller: usernameController,
-            focusNode: usernameFocus,
-            onChanged: onUsernameChanged,
-            onTap: onClearError,
-            decoration: InputDecoration(
-              hintText: "Choose a username",
-              prefixIcon: const Icon(Icons.person_outline, color: Colors.deepOrange),
-              suffixIcon: usernameSuffix,
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
-              contentPadding: const EdgeInsets.symmetric(vertical: 16, horizontal: 14),
-            ),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          padding: const EdgeInsets.all(2),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(18),
+            boxShadow: focused ? [BoxShadow(color: Colors.orange.withOpacity(0.12), blurRadius: 14, spreadRadius: 1)] : null,
+            border: Border.all(color: Colors.deepOrange, width: 1.0),
           ),
-          const SizedBox(height: 8),
-          if (usernameMessage != null)
-            Padding(
-              padding: const EdgeInsets.only(left: 8, top: 4),
-              child: Text(
-                usernameMessage!,
-                style: GoogleFonts.poppins(
-                  color: usernameAvailable == true ? Colors.green : Colors.redAccent,
-                  fontWeight: FontWeight.w600,
-                  fontSize: 13,
-                ),
+          child: Container(
+            decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16)),
+            child: TextFormField(
+              controller: usernameController,
+              focusNode: usernameFocus,
+              onChanged: (v) {
+                onUsernameChanged(v);
+              },
+              onTap: onClearError,
+              style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
+              decoration: InputDecoration(
+                hintText: "Choose a username",
+                hintStyle: GoogleFonts.poppins(color: Colors.grey.shade500, fontWeight: FontWeight.w500),
+                prefixIcon: const Icon(Icons.person_outline, color: Colors.deepOrange),
+                suffixIcon: usernameSuffix,
+                border: InputBorder.none,
+                contentPadding: const EdgeInsets.symmetric(vertical: 16, horizontal: 14),
               ),
             ),
-          Row(
+          ),
+        ),
+
+        SizedBox(height: messageGap),
+
+        // message (success / error) left-aligned
+        if (usernameMessage != null)
+          Padding(
+            padding: const EdgeInsets.only(left: 8, bottom: 0),
+            child: Text(
+              usernameMessage!,
+              textAlign: TextAlign.left,
+              style: GoogleFonts.poppins(
+                color: usernameAvailable == true ? Colors.green : Colors.redAccent,
+                fontWeight: FontWeight.w600,
+                fontSize: 13,
+              ),
+            ),
+          )
+        else
+          const SizedBox(height: 0),
+
+        SizedBox(height: messageGap),
+
+        // Terms row with shake wrapper
+        AnimatedBuilder(
+          animation: shakeTermsCtrl,
+          builder: (c, w) {
+            final t = shakeTermsCtrl.value;
+            final dx = math.sin(t * math.pi * 4) * 8.0 * (1 - t);
+            return Transform.translate(
+              offset: Offset(dx, 0),
+              child: w,
+            );
+          },
+          child: Row(
             children: [
-              Checkbox(value: termsAccepted, onChanged: onTermsChanged),
+              _buildCheckbox(context),
+              const SizedBox(width: 10),
               Expanded(
                 child: GestureDetector(
                   onTap: onTermsOpen,
                   child: RichText(
                     text: TextSpan(
                       text: "I agree to the ",
-                      style: GoogleFonts.poppins(color: Colors.black87, fontSize: 13),
+                      style: textStyle.copyWith(fontSize: 13),
                       children: [
-                        TextSpan(
-                          text: "Terms & Conditions",
-                          style: GoogleFonts.poppins(color: Colors.deepOrange, fontWeight: FontWeight.w700, decoration: TextDecoration.underline),
-                        ),
+                        TextSpan(text: "Terms & Conditions", style: textStyle.copyWith(color: termsErrorVisible ? Colors.redAccent : Colors.deepOrange, fontWeight: FontWeight.w700, decoration: TextDecoration.underline)),
                       ],
                     ),
                   ),
@@ -639,61 +838,74 @@ class _SignupCard extends StatelessWidget {
               ),
             ],
           ),
-          if (termsError != null)
-            Padding(
-              padding: const EdgeInsets.only(left: 8, top: 6),
-              child: Text(termsError!, style: GoogleFonts.poppins(color: Colors.redAccent, fontSize: 13)),
-            ),
-          const SizedBox(height: 12),
-          Center(child: _GradientButton(text: "Continue with Google", onTap: onGoogleSignup, loading: loading)),
-        ],
-      ),
+        ),
+
+        // If termsErrorVisible -> do not show extra text; border & text made red above
+        SizedBox(height: messageGap),
+
+        Center(child: _GradientButton(text: "Continue with Google", onTap: onGoogleSignup, loading: loading)),
+
+        const SizedBox(height: 8),
+      ]),
     );
   }
 }
 
-// Login Card
-class _LoginCard extends StatelessWidget {
+// --- Login Card variant that keeps continue button in same place (no move) and shows errors left with shake+vibrate
+class _LoginCardV2 extends StatelessWidget {
   final VoidCallback onGoogleLogin;
   final bool loading;
   final String? error;
   final ValueNotifier<bool> showError;
+  final double messageGap;
+  final AnimationController shakeMsgCtrl;
 
-  const _LoginCard({required Key key, required this.onGoogleLogin, required this.loading, required this.error, required this.showError}) : super(key: key);
+  const _LoginCardV2({required Key key, required this.onGoogleLogin, required this.loading, required this.error, required this.showError, required this.messageGap, required this.shakeMsgCtrl})
+      : super(key: key);
 
   @override
   Widget build(BuildContext context) {
+    // keep button at same vertical position: wrap in Column with fixed spacing
     return Container(
       key: key,
       width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(22),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.08), blurRadius: 20, offset: const Offset(0, 10))],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Center(child: _GradientButton(text: "Continue with Google", onTap: onGoogleLogin, loading: loading)),
-          const SizedBox(height: 12),
-          ValueListenableBuilder<bool>(
+      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(22), boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.06), blurRadius: 20, offset: const Offset(0, 8))]),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Center(child: _GradientButton(text: "Continue with Google", onTap: onGoogleLogin, loading: loading)),
+        SizedBox(height: messageGap),
+        // error area — Animated + shake wrapper
+        AnimatedBuilder(
+          animation: shakeMsgCtrl,
+          builder: (c, w) {
+            final t = shakeMsgCtrl.value;
+            final dx = math.sin(t * math.pi * 4) * 8.0 * (1 - t);
+            return Transform.translate(offset: Offset(dx, 0), child: w);
+          },
+          child: ValueListenableBuilder<bool>(
             valueListenable: showError,
             builder: (context, visible, _) => AnimatedOpacity(
               opacity: visible && error != null ? 1 : 0,
               duration: const Duration(milliseconds: 250),
               child: visible && error != null
-                  ? Padding(padding: const EdgeInsets.only(left: 8, top: 4), child: Text(error!, style: GoogleFonts.poppins(color: Colors.redAccent, fontSize: 13)))
+                  ? Padding(
+                padding: const EdgeInsets.only(left: 8, top: 4),
+                child: Text(
+                  error!,
+                  style: GoogleFonts.poppins(color: Colors.redAccent, fontSize: 13, fontWeight: FontWeight.w600),
+                  textAlign: TextAlign.left,
+                ),
+              )
                   : const SizedBox.shrink(),
             ),
           ),
-        ],
-      ),
+        ),
+      ]),
     );
   }
 }
 
-// Gradient Button
+// Gradient Button (unchanged)
 class _GradientButton extends StatelessWidget {
   final String text;
   final VoidCallback onTap;
