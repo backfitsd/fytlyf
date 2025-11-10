@@ -1,6 +1,8 @@
+// --- SPLASH SCREEN (FYT LYF - LOGIN CHECK + AUTO REDIRECT) ---
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:go_router/go_router.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -56,12 +58,22 @@ class _SplashScreenState extends State<SplashScreen>
 
     _controller.forward();
 
-    // Smooth transition to WelcomeScreen (via GoRouter)
-    Future.delayed(const Duration(seconds: 3), () {
-      if (mounted) {
-        context.go('/welcome');
-      }
-    });
+    // 🔥 Check authentication after 3 seconds
+    Future.delayed(const Duration(seconds: 3), _checkAuthState);
+  }
+
+  Future<void> _checkAuthState() async {
+    final user = FirebaseAuth.instance.currentUser;
+
+    if (!mounted) return;
+
+    if (user != null) {
+      // ✅ User is already logged in
+      context.go('/dashboard');
+    } else {
+      // 🚪 User not logged in, go to welcome screen
+      context.go('/welcome');
+    }
   }
 
   @override

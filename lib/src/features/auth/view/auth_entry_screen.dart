@@ -1,4 +1,4 @@
-// --- AUTH ENTRY (FYT LYF FINAL - ERRORS: VIBRATE + SHAKE + GRADIENT CHECKBOX) ---
+// --- AUTH ENTRY (FYT LYF FINAL - ERRORS: VIBRATE + SHAKE + GRADIENT CHECKBOX + LOGOUT HELPER) ---
 // Ready to paste: lib/src/features/auth/view/auth_entry_screen.dart
 
 import 'dart:async';
@@ -99,6 +99,14 @@ class _AuthEntryScreenState extends State<AuthEntryScreen> with TickerProviderSt
     super.dispose();
   }
 
+  // ✅ Logout helper (for consistent Google + Firebase signout)
+  Future<void> _logout() async {
+    try {
+      await FirebaseAuth.instance.signOut();
+      await GoogleSignIn().signOut();
+    } catch (_) {}
+  }
+
   // central error setter — triggers vibration + shake
   void _setError(String? msg) {
     setState(() => _error = msg);
@@ -175,7 +183,7 @@ class _AuthEntryScreenState extends State<AuthEntryScreen> with TickerProviderSt
     return !snap.exists;
   }
 
-  // ---------------- Username validation (user can type freely) ----------------
+  // ---------------- Username validation ----------------
   void _onUsernameChanged(String raw) {
     String value = raw.toLowerCase().replaceAll(RegExp(r'\s+'), '');
     if (_username.text != value) {
@@ -199,61 +207,18 @@ class _AuthEntryScreenState extends State<AuthEntryScreen> with TickerProviderSt
     }
 
     _debounce = Timer(const Duration(milliseconds: 600), () async {
-      // length
-      if (value.length < 4) {
-        _setValidation("Minimum 4 characters", false);
-        return;
+      // validations
+      if (value.length < 4) return _setValidation("Minimum 4 characters", false);
+      if (value.length > 20) return _setValidation("Maximum 20 characters", false);
+      if (!RegExp(r'^[a-z0-9._]+$').hasMatch(value)) return _setValidation("Only a–z, 0–9, . and _ allowed.", false);
+      if (value.startsWith('.') || value.endsWith('.')) return _setValidation("Cannot start or end with .", false);
+      if (value.contains('..') || value.contains('__') || value.contains('._') || value.contains('_.')) {
+        return _setValidation("Invalid username format", false);
       }
-      if (value.length > 20) {
-        _setValidation("Maximum 20 characters", false);
-        return;
-      }
-
-      // allowed chars
-      if (!RegExp(r'^[a-z0-9._]+$').hasMatch(value)) {
-        _setValidation("Only a–z, 0–9, . and _ allowed.", false);
-        return;
+      if ('.'.allMatches(value).length > 2 || '_'.allMatches(value).length > 2) {
+        return _setValidation("Too many dots or underscores", false);
       }
 
-      // start/end with dot
-      if (value.startsWith('.') && value.endsWith('.')) {
-        _setValidation("Cannot start and end with .", false);
-        return;
-      } else if (value.startsWith('.')) {
-        _setValidation("Cannot start with .", false);
-        return;
-      } else if (value.endsWith('.')) {
-        _setValidation("Cannot end with .", false);
-        return;
-      }
-
-      // consecutive / combos
-      if (value.contains('..')) {
-        _setValidation("Consecutive dots are not allowed.", false);
-        return;
-      }
-      if (value.contains('__')) {
-        _setValidation("Consecutive underscores are not allowed.", false);
-        return;
-      }
-      if (value.contains('._') || value.contains('_.')) {
-        _setValidation("Input not allowed", false);
-        return;
-      }
-
-      // counts
-      final dotCount = '.'.allMatches(value).length;
-      final underscoreCount = '_'.allMatches(value).length;
-      if (dotCount > 2) {
-        _setValidation("Maximum 2 dots allowed.", false);
-        return;
-      }
-      if (underscoreCount > 2) {
-        _setValidation("Maximum 2 underscores allowed.", false);
-        return;
-      }
-
-      // backend availability
       try {
         final free = await _isUsernameFree(value);
         if (!mounted) return;
@@ -276,8 +241,6 @@ class _AuthEntryScreenState extends State<AuthEntryScreen> with TickerProviderSt
       _usernameAvailable = available;
       _usernameMessage = msg;
     });
-
-    // vibrate + shake message
     _vibrate();
     _playShake(_shakeMsgCtrl);
   }
@@ -288,7 +251,7 @@ class _AuthEntryScreenState extends State<AuthEntryScreen> with TickerProviderSt
     setState(() => _loading = true);
     try {
       final googleSignIn = GoogleSignIn();
-      await googleSignIn.signOut(); // ensure chooser appears
+      await googleSignIn.signOut();
       final google = await googleSignIn.signIn();
       if (google == null) {
         setState(() => _loading = false);
@@ -302,13 +265,12 @@ class _AuthEntryScreenState extends State<AuthEntryScreen> with TickerProviderSt
       final exists = await _userDocExists(uid);
       if (!exists) {
         await FirebaseAuth.instance.signOut();
-        _setError('Account not registered. Please sign up.');
+        _setError('Google account is not registered.');
         return;
       }
       if (!mounted) return;
       context.go('/dashboard');
     } on FirebaseAuthException catch (e) {
-      // specific Firebase auth errors -> show clearer messages
       if (e.code == 'account-exists-with-different-credential' || e.code == 'email-already-in-use') {
         _setError('This email is already registered with another sign-in method. Please use that method or reset password.');
       } else if (e.code == 'user-disabled') {
@@ -317,7 +279,6 @@ class _AuthEntryScreenState extends State<AuthEntryScreen> with TickerProviderSt
         _setError(e.message ?? 'Authentication failed. Please try again.');
       }
     } catch (e) {
-      // generic
       _setError('Something went wrong.');
     } finally {
       if (mounted) setState(() => _loading = false);
@@ -327,7 +288,6 @@ class _AuthEntryScreenState extends State<AuthEntryScreen> with TickerProviderSt
   Future<void> _googleSignup() async {
     final uname = _username.text.trim().toLowerCase();
 
-    // Terms validation: highlight visually + vibrate + shake
     if (!_termsAccepted) {
       setState(() => _termsErrorVisible = true);
       _vibrate();
@@ -359,7 +319,6 @@ class _AuthEntryScreenState extends State<AuthEntryScreen> with TickerProviderSt
       final auth = await google.authentication;
       final credential = GoogleAuthProvider.credential(idToken: auth.idToken, accessToken: auth.accessToken);
 
-      // try sign-in with credential
       final cred = await FirebaseAuth.instance.signInWithCredential(credential);
       final user = cred.user!;
       final uid = user.uid;
@@ -378,8 +337,8 @@ class _AuthEntryScreenState extends State<AuthEntryScreen> with TickerProviderSt
       }
 
       await FirebaseFirestore.instance.runTransaction((txn) async {
-        txn.set(unameRef, <String, dynamic>{'uid': uid});
-        txn.set(_users.doc(uid), <String, dynamic>{
+        txn.set(unameRef, {'uid': uid});
+        txn.set(_users.doc(uid), {
           'uid': uid,
           'email': user.email,
           'name': user.displayName,
@@ -392,7 +351,6 @@ class _AuthEntryScreenState extends State<AuthEntryScreen> with TickerProviderSt
       if (!mounted) return;
       context.go('/dashboard');
     } on FirebaseAuthException catch (e) {
-      // handle cases where email already in use or account exists with different credential
       if (e.code == 'account-exists-with-different-credential' || e.code == 'email-already-in-use') {
         _setError('This email is already registered. Please login or use the original sign-in method.');
       } else if (e.code == 'invalid-credential') {
@@ -428,14 +386,12 @@ class _AuthEntryScreenState extends State<AuthEntryScreen> with TickerProviderSt
       _usernameSuffix = const Icon(Icons.cancel, color: Colors.redAccent, size: 22);
     }
 
-    // shake transforms
     Widget _buildShake({required AnimationController ctrl, required Widget child}) {
       return AnimatedBuilder(
         animation: ctrl,
         builder: (c, w) {
-          // produce a small left-right sequence using a sinus curve
           final t = ctrl.value;
-          final dx = math.sin(t * math.pi * 4) * 8.0 * (1 - t); // decaying
+          final dx = math.sin(t * math.pi * 4) * 8.0 * (1 - t);
           return Transform.translate(offset: Offset(dx, 0), child: w);
         },
         child: child,
@@ -522,16 +478,7 @@ class _AuthEntryScreenState extends State<AuthEntryScreen> with TickerProviderSt
                             _termsErrorVisible = false;
                           }),
                           onTermsOpen: () => _showTermsDialog(context),
-                          onGoogleSignup: () {
-                            // if terms missing — we shake terms specifically
-                            if (!_termsAccepted) {
-                              setState(() => _termsErrorVisible = true);
-                              _vibrate();
-                              _playShake(_shakeTermsCtrl);
-                              return;
-                            }
-                            _googleSignup();
-                          },
+                          onGoogleSignup: _googleSignup,
                           loading: _loading,
                           messageGap: _messageGap,
                           shakeTermsCtrl: _shakeTermsCtrl,
@@ -539,7 +486,7 @@ class _AuthEntryScreenState extends State<AuthEntryScreen> with TickerProviderSt
                       )
                           : _LoginCardV2(
                         key: const ValueKey('loginCard'),
-                        onGoogleLogin: () => _googleLogin(),
+                        onGoogleLogin: _googleLogin,
                         loading: _loading,
                         error: _error,
                         showError: _showError,
@@ -632,7 +579,6 @@ class _AuthEntryScreenState extends State<AuthEntryScreen> with TickerProviderSt
 
 // ---------------- Components ----------------
 
-// Capsule Header (unchanged visually)
 class _CapsuleHeader extends StatelessWidget {
   final AuthMode mode;
   final Function(AuthMode) onSelect;
@@ -679,7 +625,6 @@ class _CapsuleHeader extends StatelessWidget {
   }
 }
 
-// --- Signup Card variant with gradient checkbox + equal gaps + shake hook ---
 class _SignupCardV2 extends StatelessWidget {
   final TextEditingController usernameController;
   final FocusNode usernameFocus;
@@ -719,7 +664,6 @@ class _SignupCardV2 extends StatelessWidget {
   }) : super(key: key);
 
   Widget _buildCheckbox(BuildContext ctx) {
-    // gradient when checked, red border when termsErrorVisible true
     final gradient = const LinearGradient(colors: [Color(0xFFFF3D00), Color(0xFFFF6D00)], begin: Alignment.topLeft, end: Alignment.bottomRight);
     return GestureDetector(
       onTap: () => onTermsChanged(!termsAccepted),
@@ -769,9 +713,7 @@ class _SignupCardV2 extends StatelessWidget {
             child: TextFormField(
               controller: usernameController,
               focusNode: usernameFocus,
-              onChanged: (v) {
-                onUsernameChanged(v);
-              },
+              onChanged: (v) => onUsernameChanged(v),
               onTap: onClearError,
               style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
               decoration: InputDecoration(
@@ -785,10 +727,7 @@ class _SignupCardV2 extends StatelessWidget {
             ),
           ),
         ),
-
         SizedBox(height: messageGap),
-
-        // message (success / error) left-aligned
         if (usernameMessage != null)
           Padding(
             padding: const EdgeInsets.only(left: 8, bottom: 0),
@@ -804,19 +743,13 @@ class _SignupCardV2 extends StatelessWidget {
           )
         else
           const SizedBox(height: 0),
-
         SizedBox(height: messageGap),
-
-        // Terms row with shake wrapper
         AnimatedBuilder(
           animation: shakeTermsCtrl,
           builder: (c, w) {
             final t = shakeTermsCtrl.value;
             final dx = math.sin(t * math.pi * 4) * 8.0 * (1 - t);
-            return Transform.translate(
-              offset: Offset(dx, 0),
-              child: w,
-            );
+            return Transform.translate(offset: Offset(dx, 0), child: w);
           },
           child: Row(
             children: [
@@ -839,19 +772,14 @@ class _SignupCardV2 extends StatelessWidget {
             ],
           ),
         ),
-
-        // If termsErrorVisible -> do not show extra text; border & text made red above
         SizedBox(height: messageGap),
-
         Center(child: _GradientButton(text: "Continue with Google", onTap: onGoogleSignup, loading: loading)),
-
         const SizedBox(height: 8),
       ]),
     );
   }
 }
 
-// --- Login Card variant that keeps continue button in same place (no move) and shows errors left with shake+vibrate
 class _LoginCardV2 extends StatelessWidget {
   final VoidCallback onGoogleLogin;
   final bool loading;
@@ -860,21 +788,30 @@ class _LoginCardV2 extends StatelessWidget {
   final double messageGap;
   final AnimationController shakeMsgCtrl;
 
-  const _LoginCardV2({required Key key, required this.onGoogleLogin, required this.loading, required this.error, required this.showError, required this.messageGap, required this.shakeMsgCtrl})
-      : super(key: key);
+  const _LoginCardV2({
+    required Key key,
+    required this.onGoogleLogin,
+    required this.loading,
+    required this.error,
+    required this.showError,
+    required this.messageGap,
+    required this.shakeMsgCtrl,
+  }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
-    // keep button at same vertical position: wrap in Column with fixed spacing
     return Container(
       key: key,
       width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 20),
-      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(22), boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.06), blurRadius: 20, offset: const Offset(0, 8))]),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(22),
+        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.06), blurRadius: 20, offset: const Offset(0, 8))],
+      ),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Center(child: _GradientButton(text: "Continue with Google", onTap: onGoogleLogin, loading: loading)),
         SizedBox(height: messageGap),
-        // error area — Animated + shake wrapper
         AnimatedBuilder(
           animation: shakeMsgCtrl,
           builder: (c, w) {
@@ -905,7 +842,6 @@ class _LoginCardV2 extends StatelessWidget {
   }
 }
 
-// Gradient Button (unchanged)
 class _GradientButton extends StatelessWidget {
   final String text;
   final VoidCallback onTap;
