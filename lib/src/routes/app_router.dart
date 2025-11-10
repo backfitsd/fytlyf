@@ -1,3 +1,8 @@
+import 'package:fytlyf/src/features/dashboard/view/dashboard_root.dart' show DashboardRoot;
+import 'package:fytlyf/src/features/dashboard/view/community_screen.dart' show CommunityScreen;
+import 'package:fytlyf/src/features/dashboard/view/nutrition_screen.dart' show NutritionScreen;
+import 'package:fytlyf/src/features/dashboard/view/rewards_screen.dart' show RewardsScreen;
+import 'package:fytlyf/src/features/dashboard/view/workout_screen.dart' show WorkoutScreen;
 import 'package:go_router/go_router.dart';
 
 // --- Onboarding Screens ---
@@ -10,13 +15,20 @@ import '../features/onboarding/experience_screen.dart';
 import '../features/onboarding/preference_screen.dart';
 import '../features/onboarding/weekly_goals_screen.dart';
 import '../features/onboarding/creating_plan_screen.dart';
-import '../features/onboarding/progress_graph_screen.dart' show ProgressGraphScreen;
+import '../features/onboarding/progress_graph_screen.dart'
+    show ProgressGraphScreen;
 
 // --- Core Screens ---
 import '../features/auth/view/auth_entry_screen.dart' show AuthEntryScreen;
 import '../features/splash/splash_screen.dart';
 import '../features/welcome/welcome_screen.dart';
 import '../features/dashboard/view/dashboard_screen.dart';
+
+// --- Dashboard Sub Screens ---
+import '../features/dashboard/view/workout_screen.dart';
+import '../features/dashboard/view/community_screen.dart';
+import '../features/dashboard/view/nutrition_screen.dart';
+import '../features/dashboard/view/rewards_screen.dart';
 
 final GoRouter appRouter = GoRouter(
   initialLocation: '/splash',
@@ -81,10 +93,32 @@ final GoRouter appRouter = GoRouter(
       builder: (context, state) => const AuthEntryScreen(),
     ),
 
-    // ✅ Dashboard
+    // ✅ Dashboard Root (Main Entry with Bottom Navigation)
+    GoRoute(
+      path: '/dashboard-root',
+      builder: (context, state) => const DashboardRoot(),
+    ),
+
+    // ✅ (Optional Direct Access - Keep for safety/debug)
     GoRoute(
       path: '/dashboard',
       builder: (context, state) => const DashboardScreen(),
+    ),
+    GoRoute(
+      path: '/workout',
+      builder: (context, state) => const WorkoutScreen(),
+    ),
+    GoRoute(
+      path: '/community',
+      builder: (context, state) => const CommunityScreen(),
+    ),
+    GoRoute(
+      path: '/nutrition',
+      builder: (context, state) => const NutritionScreen(),
+    ),
+    GoRoute(
+      path: '/rewards',
+      builder: (context, state) => const RewardsScreen(),
     ),
   ],
 );
