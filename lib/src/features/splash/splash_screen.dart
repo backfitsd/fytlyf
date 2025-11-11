@@ -69,7 +69,7 @@ class _SplashScreenState extends State<SplashScreen>
 
     if (user != null) {
       // ✅ User is already logged in
-      context.go('/dashboard');
+      context.go('/dashboard-root');
     } else {
       // 🚪 User not logged in, go to welcome screen
       context.go('/welcome');
