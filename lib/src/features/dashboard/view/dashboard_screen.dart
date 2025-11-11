@@ -61,57 +61,76 @@ class _DashboardScreenState extends State<DashboardScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      // 🟠 Gradient background
-      body: Container(
-        width: double.infinity,
-        height: double.infinity,
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            colors: [
-              Color(0xFFFF3D00),
-              Color(0xFFFF6D00),
-              Color(0xFFFFA726),
-            ],
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-          ),
-        ),
-        child: SafeArea(
-          child: Column(
-            children: [
-              // 👋 Greeting + Icons (moved from header)
-              Padding(
+      backgroundColor: Colors.white,
+      body: SafeArea(
+        child: Column(
+          children: [
+            // ---------- 🧭 TOP HEADER ----------
+            Container(
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius:
+                const BorderRadius.vertical(bottom: Radius.circular(26)),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.07),
+                    blurRadius: 18,
+                    offset: const Offset(0, 6),
+                  ),
+                ],
+              ),
+              child: Padding(
                 padding:
-                const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+                const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
                     // 👋 Greeting + Name
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
                       children: [
                         Text(
                           greeting,
                           style: const TextStyle(
-                            fontSize: 14,
+                            fontSize: 13,
                             fontWeight: FontWeight.w600,
-                            color: Colors.white,
+                            color: Colors.black87,
                           ),
                         ),
-                        const SizedBox(height: 4),
-                        const Text(
-                          "Aditya",
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.w800,
-                            color: Colors.white,
+                        const SizedBox(height: 3),
+
+                        // ✅ Gradient Name
+                        ShaderMask(
+                          shaderCallback: (Rect bounds) {
+                            return const LinearGradient(
+                              colors: [
+                                Color(0xFFFF3D00),
+                                Color(0xFFFF6D00),
+                                Color(0xFFFFA726),
+                              ],
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                            ).createShader(bounds);
+                          },
+                          blendMode: BlendMode.srcIn,
+                          child: const Text(
+                            "Aditya",
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w800,
+                              color: Colors.white,
+                              letterSpacing: 0.2,
+                            ),
                           ),
                         ),
                       ],
                     ),
 
-                    // 🔥 Fire + Notification + Profile
+                    // 🔥 Icons Row
                     Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
                         ShaderMask(
                           shaderCallback: (Rect bounds) {
@@ -129,62 +148,95 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           blendMode: BlendMode.srcIn,
                           child: const Icon(
                             Icons.local_fire_department_rounded,
-                            size: 36,
+                            size: 34,
                             color: Colors.white,
                           ),
                         ),
-                        const SizedBox(width: 14),
+                        const SizedBox(width: 16),
                         IconButton(
                           onPressed: _logoutAndGoToAuth,
                           icon: const Icon(Iconsax.notification),
-                          iconSize: 32,
-                          color: Colors.white,
+                          iconSize: 30,
+                          color: Colors.black87,
+                          splashRadius: 24,
                         ),
-                        const SizedBox(width: 6),
+                        const SizedBox(width: 8),
                         IconButton(
                           onPressed: () {},
                           icon: const Icon(Iconsax.profile_circle),
-                          iconSize: 36,
-                          color: Colors.white,
+                          iconSize: 34,
+                          color: Colors.black87,
+                          splashRadius: 26,
                         ),
                       ],
                     ),
                   ],
                 ),
               ),
+            ),
 
-              const SizedBox(height: 20),
-
-              // 🧱 Dashboard Body (Example Content)
-              Expanded(
-                child: Container(
-                  width: double.infinity,
-                  decoration: const BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.vertical(
-                      top: Radius.circular(32),
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black26,
-                        blurRadius: 12,
-                        offset: Offset(0, -4),
-                      ),
-                    ],
+            // ---------- 🪄 ROUNDED CARD BELOW HEADER (DOUBLED HEIGHT) ----------
+            Padding(
+              padding: const EdgeInsets.fromLTRB(18, 16, 18, 0),
+              child: Container(
+                width: double.infinity,
+                height: 220, // ⬅️ doubled height for larger card
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(
+                    color: Colors.grey.withOpacity(0.3),
+                    width: 1.2,
                   ),
-                  child: const Center(
-                    child: Text(
-                      "Dashboard Base Screen",
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.05),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                padding:
+                const EdgeInsets.symmetric(horizontal: 20, vertical: 22),
+                child: const Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      "Your Daily Overview",
                       style: TextStyle(
-                        fontWeight: FontWeight.w600,
-                        color: Colors.black54,
+                        fontSize: 15,
+                        fontWeight: FontWeight.w700,
+                        color: Colors.black87,
                       ),
                     ),
+                    SizedBox(height: 10),
+                    Text(
+                      "Here will go your plan, streaks, and progress summary. "
+                          "You can later add stats, activity circles, or quick actions here.",
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: Colors.black54,
+                        height: 1.4,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+
+            // ---------- 🧱 BODY CONTENT ----------
+            const Expanded(
+              child: Center(
+                child: Text(
+                  "Dashboard Base Screen",
+                  style: TextStyle(
+                    fontWeight: FontWeight.w600,
+                    color: Colors.black54,
                   ),
                 ),
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );

@@ -30,7 +30,7 @@ class _DashboardRootState extends State<DashboardRoot> {
       setState(() => _currentIndex = index);
       _pageController.animateToPage(
         index,
-        duration: const Duration(milliseconds: 350),
+        duration: const Duration(milliseconds: 300),
         curve: Curves.easeOutCubic,
       );
     }
@@ -40,15 +40,11 @@ class _DashboardRootState extends State<DashboardRoot> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
-
-      // 🧭 Main PageView (smooth transitions)
       body: PageView(
         controller: _pageController,
         physics: const NeverScrollableScrollPhysics(),
         children: _screens,
       ),
-
-      // 🔽 Fixed Bottom Navigation
       bottomNavigationBar: BottomNavBar(
         currentIndex: _currentIndex,
         onItemTap: _onNavTap,

@@ -17,12 +17,12 @@ class BottomNavBar extends StatelessWidget {
     Color(0xFFFFA726),
   ];
 
-  final List<_NavItem> _navItems = const [
-    _NavItem(Iconsax.home_2, "Home"),
-    _NavItem(Icons.fitness_center_rounded, "Workout"),
-    _NavItem(Iconsax.people, "Community"),
-    _NavItem(Icons.restaurant_menu_rounded, "Nutrition"),
-    _NavItem(Iconsax.cup, "Rewards"),
+  final List<IconData> _icons = const [
+    Iconsax.home_2,
+    Icons.fitness_center_rounded,
+    Iconsax.people,
+    Icons.restaurant_menu_rounded,
+    Iconsax.cup,
   ];
 
   @override
@@ -47,66 +47,50 @@ class BottomNavBar extends StatelessWidget {
             top: false,
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: List.generate(
-                _navItems.length,
-                    (index) => _buildAnimatedIcon(
-                  icon: _navItems[index].icon,
-                  index: index,
-                ),
-              ),
+              children: List.generate(_icons.length, (index) {
+                final isActive = currentIndex == index;
+                return GestureDetector(
+                  onTap: () => onItemTap(index),
+                  behavior: HitTestBehavior.opaque,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 6),
+                    child: AnimatedScale(
+                      scale: isActive ? 1.2 : 1.0,
+                      duration: const Duration(milliseconds: 250),
+                      curve: Curves.easeOutCubic,
+                      child: AnimatedSwitcher(
+                        duration: const Duration(milliseconds: 250),
+                        transitionBuilder: (child, animation) =>
+                            ScaleTransition(scale: animation, child: child),
+                        child: isActive
+                            ? ShaderMask(
+                          key: ValueKey('active_$index'),
+                          shaderCallback: (Rect bounds) {
+                            return const LinearGradient(
+                              colors: appGradient,
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                            ).createShader(bounds);
+                          },
+                          blendMode: BlendMode.srcIn,
+                          child: Icon(_icons[index],
+                              size: 30, color: Colors.white),
+                        )
+                            : Icon(
+                          key: ValueKey('inactive_$index'),
+                          _icons[index],
+                          size: 26,
+                          color: Colors.grey.withOpacity(0.7),
+                        ),
+                      ),
+                    ),
+                  ),
+                );
+              }),
             ),
           ),
         ),
       ),
     );
   }
-
-  Widget _buildAnimatedIcon({
-    required IconData icon,
-    required int index,
-  }) {
-    final bool isActive = currentIndex == index;
-    return GestureDetector(
-      onTap: () => onItemTap(index),
-      behavior: HitTestBehavior.opaque,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 6),
-        child: AnimatedScale(
-          scale: isActive ? 1.2 : 1.0,
-          duration: const Duration(milliseconds: 250),
-          curve: Curves.easeOutCubic,
-          child: AnimatedSwitcher(
-            duration: const Duration(milliseconds: 250),
-            transitionBuilder: (child, animation) =>
-                ScaleTransition(scale: animation, child: child),
-            child: isActive
-                ? ShaderMask(
-              key: ValueKey('active_$index'),
-              shaderCallback: (Rect bounds) {
-                return const LinearGradient(
-                  colors: appGradient,
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ).createShader(bounds);
-              },
-              blendMode: BlendMode.srcIn,
-              child: Icon(icon, size: 30, color: Colors.white),
-            )
-                : Icon(
-              key: ValueKey('inactive_$index'),
-              icon,
-              size: 26,
-              color: Colors.grey.withOpacity(0.7),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _NavItem {
-  final IconData icon;
-  final String label;
-  const _NavItem(this.icon, this.label);
 }
