@@ -21,8 +21,8 @@ import '../features/onboarding/creating_plan_screen.dart';
 import '../features/onboarding/progress_graph_screen.dart' show ProgressGraphScreen;
 
 final GoRouter appRouter = GoRouter(
-  // ✅ Root dashboard container with bottom nav
-  initialLocation: '/dashboard-root',
+  // ✅ Root route now starts from Splash Screen
+  initialLocation: '/splash',
   routes: [
     // ✅ Splash
     GoRoute(

@@ -415,21 +415,21 @@ class _AuthEntryScreenState extends State<AuthEntryScreen> with TickerProviderSt
     final gradientHeight = screenH * 0.35;
     final cardWidth = screenW * 0.92;
 
-    Widget? _usernameSuffix;
+    Widget? usernameSuffixLocal;
     if (_checkingUsername) {
-      _usernameSuffix = const SizedBox(
+      usernameSuffixLocal = const SizedBox(
         width: 20,
         height: 20,
         child: CircularProgressIndicator(strokeWidth: 2.4, color: Color(0xFF9E9E9E)),
       );
     } else if (_usernameAvailable == true) {
-      _usernameSuffix = const Icon(Icons.check_circle, color: Colors.green, size: 22);
+      usernameSuffixLocal = const Icon(Icons.check_circle, color: Colors.green, size: 22);
     } else if (_usernameAvailable == false) {
-      _usernameSuffix = const Icon(Icons.cancel, color: Colors.redAccent, size: 22);
+      usernameSuffixLocal = const Icon(Icons.cancel, color: Colors.redAccent, size: 22);
     }
 
     // shake transforms
-    Widget _buildShake({required AnimationController ctrl, required Widget child}) {
+    Widget buildShake({required AnimationController ctrl, required Widget child}) {
       return AnimatedBuilder(
         animation: ctrl,
         builder: (c, w) {
@@ -503,13 +503,13 @@ class _AuthEntryScreenState extends State<AuthEntryScreen> with TickerProviderSt
                     child: SizedBox(
                       width: cardWidth,
                       child: mode == AuthMode.signup
-                          ? _buildShake(
+                          ? buildShake(
                         ctrl: _shakeMsgCtrl,
                         child: _SignupCardV2(
                           key: const ValueKey('signupCard'),
                           usernameController: _username,
                           usernameFocus: _usernameFocus,
-                          usernameSuffix: _usernameSuffix,
+                          usernameSuffix: usernameSuffixLocal,
                           checkingUsername: _checkingUsername,
                           usernameAvailable: _usernameAvailable,
                           usernameMessage: _usernameMessage,
@@ -709,7 +709,7 @@ class _SignupCardV2 extends StatelessWidget {
   final AnimationController shakeMsgCtrl;
 
   const _SignupCardV2({
-    required Key key,
+    Key? key,
     required this.usernameController,
     required this.usernameFocus,
     required this.usernameSuffix,
@@ -899,7 +899,7 @@ class _LoginCardV2 extends StatelessWidget {
   final double messageGap;
   final AnimationController shakeMsgCtrl;
 
-  const _LoginCardV2({required Key key, required this.onGoogleLogin, required this.loading, required this.error, required this.showError, required this.messageGap, required this.shakeMsgCtrl})
+  const _LoginCardV2({Key? key, required this.onGoogleLogin, required this.loading, required this.error, required this.showError, required this.messageGap, required this.shakeMsgCtrl})
       : super(key: key);
 
   @override
@@ -949,7 +949,7 @@ class _GradientButton extends StatelessWidget {
   final String text;
   final VoidCallback onTap;
   final bool loading;
-  const _GradientButton({required this.text, required this.onTap, required this.loading, super.key});
+  const _GradientButton({Key? key, required this.text, required this.onTap, required this.loading}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {

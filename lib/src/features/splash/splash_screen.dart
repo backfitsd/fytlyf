@@ -1,8 +1,9 @@
-// --- SPLASH SCREEN (FYT LYF - LOGIN CHECK + AUTO REDIRECT) ---
+// --- SPLASH SCREEN (FYT LYF - LOGIN CHECK + USER DOC VALIDATION) ---
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:go_router/go_router.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -30,25 +31,13 @@ class _SplashScreenState extends State<SplashScreen>
       duration: const Duration(seconds: 2),
     );
 
-    // Text animations
-    _fadeAnimation = CurvedAnimation(
-      parent: _controller,
-      curve: Curves.easeIn,
-    );
+    _fadeAnimation = CurvedAnimation(parent: _controller, curve: Curves.easeIn);
     _scaleAnimation = Tween<double>(begin: 0.8, end: 1.0).animate(
-      CurvedAnimation(
-        parent: _controller,
-        curve: Curves.elasticOut,
-      ),
+      CurvedAnimation(parent: _controller, curve: Curves.elasticOut),
     );
     _glowAnimation = Tween<double>(begin: 0.0, end: 20.0).animate(
-      CurvedAnimation(
-        parent: _controller,
-        curve: Curves.easeInOut,
-      ),
+      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
     );
-
-    // Logo animations
     _logoScaleAnimation = Tween<double>(begin: 0.7, end: 1.0).animate(
       CurvedAnimation(parent: _controller, curve: Curves.elasticOut),
     );
@@ -59,19 +48,50 @@ class _SplashScreenState extends State<SplashScreen>
     _controller.forward();
 
     // 🔥 Check authentication after 3 seconds
-    Future.delayed(const Duration(seconds: 3), _checkAuthState);
+    Future.delayed(const Duration(seconds: 3), _checkUserAndRoute);
   }
 
-  Future<void> _checkAuthState() async {
+  /// ✅ Ensures Firestore user document exists
+  Future<bool> _ensureUserDocExists(User user) async {
+    final ref = FirebaseFirestore.instance.collection('users').doc(user.uid);
+    final snap = await ref.get();
+
+    if (snap.exists) {
+      debugPrint('✅ User doc exists for ${user.email}');
+      return true;
+    }
+
+    debugPrint('⚠️ No Firestore doc found for ${user.email}, creating default...');
+    await ref.set({
+      'uid': user.uid,
+      'email': user.email,
+      'name': user.displayName ?? 'User',
+      'username': user.email?.split('@').first ?? 'user_${user.uid.substring(0, 6)}',
+      'createdAt': FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true));
+
+    return true;
+  }
+
+  /// 🔍 Checks auth + Firestore state and redirects
+  Future<void> _checkUserAndRoute() async {
     final user = FirebaseAuth.instance.currentUser;
 
     if (!mounted) return;
 
     if (user != null) {
-      // ✅ User is already logged in
-      context.go('/dashboard-root');
+      try {
+        final docExists = await _ensureUserDocExists(user);
+        if (docExists) {
+          context.go('/dashboard-root');
+        } else {
+          context.go('/welcome');
+        }
+      } catch (e) {
+        debugPrint('❌ Error checking user document: $e');
+        context.go('/welcome');
+      }
     } else {
-      // 🚪 User not logged in, go to welcome screen
       context.go('/welcome');
     }
   }
