@@ -175,12 +175,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
               ),
             ),
 
-            // ---------- 🪄 ROUNDED CARD BELOW HEADER (DOUBLED HEIGHT) ----------
+            // ---------- 🪄 MAIN BIG CARD ----------
             Padding(
               padding: const EdgeInsets.fromLTRB(18, 16, 18, 0),
               child: Container(
                 width: double.infinity,
-                height: 220, // ⬅️ doubled height for larger card
+                height: 220,
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(20),
@@ -221,6 +221,47 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     ),
                   ],
                 ),
+              ),
+            ),
+
+            // ---------- 🧩 3 SMALL CARDS (HORIZONTAL ALIGNMENT, 0.7x HEIGHT) ----------
+            Padding(
+              padding: const EdgeInsets.fromLTRB(18, 14, 18, 0),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: List.generate(3, (index) {
+                  return Expanded(
+                    child: Container(
+                      height: 77, // ⬅️ reduced to 0.7x of 110
+                      margin: EdgeInsets.only(
+                          right: index < 2 ? 12 : 0), // spacing between cards
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(18),
+                        border: Border.all(
+                          color: Colors.grey.withOpacity(0.3),
+                          width: 1.2,
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.05),
+                            blurRadius: 8,
+                            offset: const Offset(0, 3),
+                          ),
+                        ],
+                      ),
+                      child: Center(
+                        child: Text(
+                          "Card ${index + 1}",
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w600,
+                            color: Colors.black87,
+                          ),
+                        ),
+                      ),
+                    ),
+                  );
+                }),
               ),
             ),
 
