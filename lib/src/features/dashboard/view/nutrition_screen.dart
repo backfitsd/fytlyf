@@ -2,10 +2,298 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:iconsax/iconsax.dart';
+import 'package:flutter/cupertino.dart';
 
-class NutritionScreen extends StatelessWidget {
+class NutritionScreen extends StatefulWidget {
   const NutritionScreen({super.key});
 
+  @override
+  State<NutritionScreen> createState() => _NutritionScreenState();
+}
+
+class _NutritionScreenState extends State<NutritionScreen> with SingleTickerProviderStateMixin {
+  late final AnimationController _ctrl;
+
+  // App gradient (re-used)
+  static const LinearGradient _appGradient = LinearGradient(
+    colors: [
+      Color(0xFFFF3D00),
+      Color(0xFFFF6D00),
+      Color(0xFFFFA726),
+    ],
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+  );
+
+  // Hydration state (copied behavior from Dashboard)
+  double currentWater = 1.2; // example starting liters
+  final double goalWater = 2.5;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 900),
+    );
+
+    // start animation on mount
+    _ctrl.forward();
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  // ---------- Water popup (adapted & layout-fixed) ----------
+  void _showWaterPopup(BuildContext context) {
+    double tempWater = currentWater;
+    int selectedAmount = 250;
+    final int maxAmount = 500;
+    final int step = 10;
+    final scrollController =
+    FixedExtentScrollController(initialItem: selectedAmount ~/ step);
+
+    void _showCupertinoConfirm(String action, VoidCallback onConfirm) {
+      showCupertinoModalPopup(
+        context: context,
+        builder: (BuildContext context) => CupertinoActionSheet(
+          title: Text("Confirm $action",
+              style: const TextStyle(fontWeight: FontWeight.w700)),
+          message: Text(
+            "Are you sure you want to $action ${selectedAmount} ml of water?",
+            style: const TextStyle(fontSize: 15, color: Colors.black87),
+          ),
+          actions: [
+            CupertinoActionSheetAction(
+              onPressed: onConfirm,
+              isDefaultAction: true,
+              child: Text("Yes, $action",
+                  style: const TextStyle(
+                      color: Colors.blueAccent,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 16)),
+            ),
+          ],
+          cancelButton: CupertinoActionSheetAction(
+            onPressed: () => Navigator.pop(context),
+            isDestructiveAction: true,
+            child: const Text("Cancel",
+                style: TextStyle(color: Colors.redAccent, fontSize: 15)),
+          ),
+        ),
+      );
+    }
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        final size = MediaQuery.of(context).size;
+        final width = size.width;
+        final height = size.height;
+        final double adaptiveIconSize = width * 0.055;
+
+        return StatefulBuilder(builder: (context, setState) {
+          double progress = (tempWater / goalWater).clamp(0.0, 1.0);
+
+          return Dialog(
+            insetPadding: EdgeInsets.symmetric(horizontal: width * 0.08),
+            backgroundColor: Colors.white,
+            shape:
+            RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+            child: Padding(
+              padding: EdgeInsets.all(width * 0.05),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text("Hydration",
+                            style: TextStyle(
+                                fontSize: width * 0.05,
+                                fontWeight: FontWeight.w800,
+                                color: Colors.black87)),
+                        Text("Today, Nov 10",
+                            style: TextStyle(
+                                fontSize: width * 0.035,
+                                fontWeight: FontWeight.w500,
+                                color: Colors.black54)),
+                      ]),
+                  SizedBox(height: height * 0.02),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      Expanded(
+                          flex: 5,
+                          child: Column(children: [
+                            Stack(alignment: Alignment.center, children: [
+                              SizedBox(
+                                height: width * 0.35,
+                                width: width * 0.35,
+                                child: CircularProgressIndicator(
+                                  value: progress,
+                                  strokeWidth: 9,
+                                  backgroundColor:
+                                  Colors.blueAccent.withOpacity(0.15),
+                                  valueColor: const AlwaysStoppedAnimation(
+                                      Colors.blueAccent),
+                                ),
+                              ),
+                              Icon(Icons.water_drop_rounded,
+                                  size: adaptiveIconSize * 1.1,
+                                  color: Colors.blueAccent),
+                            ]),
+                            SizedBox(height: height * 0.015),
+                            Text(
+                              "${tempWater.toStringAsFixed(1)}L / ${goalWater.toStringAsFixed(1)}L",
+                              style: TextStyle(
+                                  fontSize: width * 0.037,
+                                  fontWeight: FontWeight.w700),
+                            ),
+                          ])),
+                      Expanded(
+                          flex: 5,
+                          child: Column(children: [
+                            Text("Select water (ml)",
+                                style: TextStyle(
+                                    fontSize: width * 0.035,
+                                    fontWeight: FontWeight.w600,
+                                    color: Colors.black87)),
+                            SizedBox(height: height * 0.01),
+                            SizedBox(
+                              height: height * 0.12,
+                              child: ListWheelScrollView.useDelegate(
+                                controller: scrollController,
+                                itemExtent: height * 0.03,
+                                physics: const FixedExtentScrollPhysics(),
+                                overAndUnderCenterOpacity: 0.5,
+                                onSelectedItemChanged: (index) {
+                                  setState(() {
+                                    selectedAmount = index * step;
+                                  });
+                                },
+                                childDelegate: ListWheelChildBuilderDelegate(
+                                  childCount: (maxAmount ~/ step) + 1,
+                                  builder: (context, index) {
+                                    int value = index * step;
+                                    bool isSelected = value == selectedAmount;
+                                    return AnimatedDefaultTextStyle(
+                                      duration:
+                                      const Duration(milliseconds: 150),
+                                      style: TextStyle(
+                                        fontSize: isSelected
+                                            ? width * 0.045
+                                            : width * 0.038,
+                                        fontWeight: isSelected
+                                            ? FontWeight.w800
+                                            : FontWeight.w500,
+                                        color: isSelected
+                                            ? Colors.blueAccent
+                                            : Colors.black38,
+                                      ),
+                                      child: Text("$value ml"),
+                                    );
+                                  },
+                                ),
+                              ),
+                            ),
+                          ])),
+                    ],
+                  ),
+                  SizedBox(height: height * 0.025),
+                  _exploreButton(context, onTap: () {
+                    setState(() {
+                      currentWater = tempWater;
+                    });
+                    Navigator.pop(context);
+                  }),
+                ],
+              ),
+            ),
+          );
+        });
+      },
+    );
+  }
+
+  Widget _metric(IconData icon, String title, String value, Color color) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6.0),
+      child: Row(children: [
+        Stack(alignment: Alignment.center, children: [
+          SizedBox(
+            height: 36,
+            width: 36,
+            child: CircularProgressIndicator(
+              value: 0.7,
+              strokeWidth: 4,
+              backgroundColor: color.withOpacity(0.15),
+              valueColor: AlwaysStoppedAnimation(color),
+            ),
+          ),
+          Icon(icon, size: 18, color: color),
+        ]),
+        const SizedBox(width: 10),
+        Expanded(
+            child: Text(title,
+                style:
+                const TextStyle(fontWeight: FontWeight.w600, fontSize: 14))),
+        Text(value,
+            style: const TextStyle(
+                fontWeight: FontWeight.w600,
+                fontSize: 13,
+                color: Colors.black54)),
+      ]),
+    );
+  }
+
+  // ✅ Updated gradient explore button (same for both popups)
+  Widget _exploreButton(BuildContext context, {VoidCallback? onTap}) {
+    return SizedBox(
+      width: double.infinity,
+      child: InkWell(
+        onTap: onTap ?? () => Navigator.pop(context),
+        borderRadius: BorderRadius.circular(14),
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 14),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(14),
+            gradient: const LinearGradient(
+              colors: [
+                Color(0xFFFF3D00),
+                Color(0xFFFF6D00),
+                Color(0xFFFFA726),
+              ],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.08),
+                blurRadius: 6,
+                offset: const Offset(0, 3),
+              ),
+            ],
+          ),
+          alignment: Alignment.center,
+          child: const Text(
+            "EXPLORE",
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 16,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 0.5,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  // ---------- UI build (rings animate using _ctrl) ----------
   @override
   Widget build(BuildContext context) {
     final size = MediaQuery.of(context).size;
@@ -32,15 +320,6 @@ class NutritionScreen extends StatelessWidget {
       return "You’re above target.\nGo lighter now and hydrate well.";
     }
 
-    // Common button style
-    final ButtonStyle btnStyle = OutlinedButton.styleFrom(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      side: BorderSide(color: Colors.black.withOpacity(0.08)),
-      foregroundColor: Colors.black87,
-      minimumSize: const Size(64, 44),
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-    );
-
     return Scaffold(
       backgroundColor: const Color(0xFFF4F7FB),
       body: SafeArea(
@@ -53,20 +332,11 @@ class NutritionScreen extends StatelessWidget {
                 elevation: 5,
                 shadowColor: Colors.black.withOpacity(0.06),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
-                // make Material transparent so gradient from Container is visible
                 color: Colors.transparent,
                 child: Container(
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(22),
-                    gradient: const LinearGradient(
-                      colors: [
-                        Color(0xFFFF3D00),
-                        Color(0xFFFF6D00),
-                        Color(0xFFFFA726),
-                      ],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
+                    gradient: _appGradient,
                   ),
                   child: Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
@@ -83,7 +353,7 @@ class NutritionScreen extends StatelessWidget {
                         ),
                         Text(
                           'Today, Nov 10',
-                          style: TextStyle(fontSize: 15, color: Colors.white70),
+                          style: TextStyle(fontSize: 15, fontWeight: FontWeight.w900, color: Colors.white),
                         ),
                       ],
                     ),
@@ -113,9 +383,9 @@ class NutritionScreen extends StatelessWidget {
                               final cw = constraints.maxWidth;
                               final ch = constraints.maxHeight;
 
-                              // Progress ring sizing (already +1.2x from previous step)
-                              double ringSize =
-                              (min(cw, ch) * 0.65 * 1.2 * 1.2).clamp(90.0, min(cw * 0.98, ch * 0.98));
+                              // Progress ring sizing
+                              double ringSize = (min(cw, ch) * 0.65 * 1.2 * 1.2)
+                                  .clamp(90.0, min(cw * 0.98, ch * 0.98));
                               final double ringWidth = (ringSize * 0.07).clamp(3.0, 7.0).toDouble();
 
                               final double iconSize = ((ringSize / 1.5) * 0.42).toDouble();
@@ -139,30 +409,34 @@ class NutritionScreen extends StatelessWidget {
                                     ),
                                   ),
 
-                                  // GAP below title increased by 1.1x
                                   SizedBox(height: vGapSmall * 1.4 * 1.1),
 
-                                  // Big circular progress (centered)
+                                  // Animated ring (use AnimatedBuilder)
                                   Center(
-                                    child: _SolidRingWithIcon(
-                                      size: ringSize,
-                                      ringWidth: ringWidth,
-                                      progress: progressRaw.clamp(0.0, 1.0),
-                                      baseColor: const Color(0xFFE8F2FF),
-                                      ringColor: calorieColor,
-                                      icon: Iconsax.flash,
-                                      iconSize: iconSize,
+                                    child: AnimatedBuilder(
+                                      animation: _ctrl,
+                                      builder: (context, _) {
+                                        final animatedProgress = (_ctrl.value * progressRaw).clamp(0.0, 1.0);
+                                        return _SolidRingWithIcon(
+                                          size: ringSize,
+                                          ringWidth: ringWidth,
+                                          progress: animatedProgress,
+                                          baseColor: const Color(0xFFE8F2FF),
+                                          ringColor: calorieColor,
+                                          icon: Iconsax.flash,
+                                          iconSize: iconSize,
+                                        );
+                                      },
                                     ),
                                   ),
 
-                                  // GAP below ring increased by 1.2x
                                   SizedBox(height: vGapSmall * 1.3 * 1.2),
 
                                   // Progress text
                                   FittedBox(
                                     fit: BoxFit.scaleDown,
                                     child: Text(
-                                      '$current/$goal g',
+                                      '${(progressRaw * goal).round()}/${goal} g',
                                       style: const TextStyle(
                                         fontSize: 19,
                                         fontWeight: FontWeight.w700,
@@ -171,7 +445,6 @@ class NutritionScreen extends StatelessWidget {
                                     ),
                                   ),
 
-                                  // push motivation to bottom
                                   const Spacer(),
 
                                   // Motivational line at the BOTTOM of the 1st card
@@ -221,14 +494,13 @@ class NutritionScreen extends StatelessWidget {
                               final double colWidth = ((cw - hGap) / 2);
                               final double rowHeight = ((ch - vGap) / 2);
 
-                              final double ringSize =
-                              (min(colWidth, rowHeight) * 0.7).clamp(44.0, 120.0).toDouble();
+                              final double ringSize = (min(colWidth, rowHeight) * 0.7).clamp(44.0, 120.0).toDouble();
                               final double ringWidth = (ringSize * 0.07).clamp(3.0, 6.0).toDouble();
                               final double titleSize = (ringSize * 0.26).clamp(12.0, 17.0).toDouble();
                               final double valueSize =
                               (ringSize * 0.23 * 0.8 * 1.1).clamp(9.0, 15.0).toDouble();
 
-                              Widget buildCell(String title, IconData icon, double progress, String value, Color color) {
+                              Widget buildCell(String title, IconData icon, double targetProgress, String value, Color color) {
                                 return SizedBox(
                                   width: colWidth,
                                   height: rowHeight,
@@ -247,14 +519,20 @@ class NutritionScreen extends StatelessWidget {
                                         ),
                                       ),
                                       const SizedBox(height: 8),
-                                      _SolidRingWithIcon(
-                                        size: ringSize,
-                                        ringWidth: ringWidth,
-                                        progress: progress,
-                                        baseColor: const Color(0xFFE8F2FF),
-                                        ringColor: color,
-                                        icon: icon,
-                                        iconSize: (ringSize * 0.42).clamp(16.0, ringSize * 0.55).toDouble(),
+                                      AnimatedBuilder(
+                                        animation: _ctrl,
+                                        builder: (context, _) {
+                                          final animatedProgress = (_ctrl.value * targetProgress).clamp(0.0, 1.0);
+                                          return _SolidRingWithIcon(
+                                            size: ringSize,
+                                            ringWidth: ringWidth,
+                                            progress: animatedProgress,
+                                            baseColor: const Color(0xFFE8F2FF),
+                                            ringColor: color,
+                                            icon: icon,
+                                            iconSize: (ringSize * 0.42).clamp(16.0, ringSize * 0.55).toDouble(),
+                                          );
+                                        },
                                       ),
                                       const SizedBox(height: 8),
                                       FittedBox(
@@ -305,18 +583,17 @@ class NutritionScreen extends StatelessWidget {
                   Expanded(
                     flex: 4,
                     child: Align(
-                      alignment: Alignment.centerLeft,
+                      alignment: Alignment.center,
                       child: SizedBox(
-                        // limit width so it doesn't overflow in narrow screens
-                        width: min(160, size.width * 0.36),
+                        width: min(160, size.width * 0.34),
                         height: 48,
-                        child: OutlinedButton.icon(
+                        child: GradientBorderButton(
+                          gradient: _appGradient,
                           onPressed: () {
                             // TODO: implement add meal
                           },
-                          icon: const Icon(Icons.add, size: 18),
-                          label: const Text('Add Meal', style: TextStyle(fontWeight: FontWeight.w600)),
-                          style: btnStyle,
+                          icon: const Icon(Icons.add, size: 18, color: Colors.black87),
+                          label: const Text('Add Meal', style: TextStyle(fontWeight: FontWeight.w600, color: Colors.black87)),
                         ),
                       ),
                     ),
@@ -324,21 +601,19 @@ class NutritionScreen extends StatelessWidget {
 
                   const SizedBox(width: 8),
 
-                  // Align right button under the nutrients card (flex 6)
+                  // Align right button under the nutrients card (flex 5)
                   Expanded(
-                    flex: 6,
+                    flex: 5,
                     child: Align(
                       alignment: Alignment.centerLeft,
                       child: SizedBox(
-                        width: min(320, size.width * 0.53), // wider button as in your screenshot
+                        width: min(320, size.width * 0.48),
                         height: 48,
-                        child: OutlinedButton.icon(
-                          onPressed: () {
-                            // TODO: implement add water intake
-                          },
-                          icon: const Icon(Icons.local_drink, size: 18, color: Colors.blue,),
-                          label: const Text('Add Water Intake', style: TextStyle(fontWeight: FontWeight.w600)),
-                          style: btnStyle,
+                        child: GradientBorderButton(
+                          gradient: _appGradient,
+                          onPressed: () => _showWaterPopup(context), // <-- wired to popup
+                          icon: const Icon(Icons.local_drink, size: 18, color: Colors.blue),
+                          label: const Text('Add Water Intake', style: TextStyle(fontWeight: FontWeight.w600, color: Colors.black87)),
                         ),
                       ),
                     ),
@@ -355,6 +630,66 @@ class NutritionScreen extends StatelessWidget {
   }
 }
 
+/// Gradient bordered button — white inner fill with gradient stroke.
+class GradientBorderButton extends StatelessWidget {
+  final LinearGradient gradient;
+  final Widget label;
+  final Widget icon;
+  final VoidCallback? onPressed;
+  final double borderWidth;
+  final double borderRadius;
+
+  const GradientBorderButton({
+    Key? key,
+    required this.gradient,
+    required this.label,
+    required this.icon,
+    required this.onPressed,
+    this.borderWidth = 2.0,
+    this.borderRadius = 12.0,
+  }) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    // Outer gradient stroke container; inner is white button surface
+    return GestureDetector(
+      onTap: onPressed,
+      child: Container(
+        decoration: BoxDecoration(
+          gradient: gradient,
+          borderRadius: BorderRadius.circular(borderRadius),
+        ),
+        padding: EdgeInsets.all(borderWidth),
+        child: Container(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(borderRadius - borderWidth),
+            boxShadow: [
+              BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 4, offset: const Offset(0, 1)),
+            ],
+          ),
+          child: Center(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 10.0),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  icon,
+                  const SizedBox(width: 8),
+                  DefaultTextStyle.merge(
+                    style: const TextStyle(color: Colors.black87),
+                    child: label,
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 Color _calorieSolidColor(double p) {
   if (p <= 0.2) return const Color(0xFFFFD54F); // yellow
   if (p <= 0.6) return const Color(0xFFFB8C00); // orange
@@ -363,6 +698,7 @@ Color _calorieSolidColor(double p) {
 }
 
 /// ----- Solid ring with center icon -----
+/// This painter remains the same, but the `progress` parameter is now animated from parent.
 class _SolidRingWithIcon extends StatelessWidget {
   final double size, ringWidth, progress, iconSize;
   final Color baseColor, ringColor;
@@ -371,7 +707,7 @@ class _SolidRingWithIcon extends StatelessWidget {
   const _SolidRingWithIcon({
     required this.size,
     required this.ringWidth,
-    required this.progress, // 0..1
+    required this.progress, // 0..1 (animated)
     required this.baseColor,
     required this.ringColor,
     required this.icon,
