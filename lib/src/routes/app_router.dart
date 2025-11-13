@@ -1,7 +1,7 @@
 import 'package:fytlyf/src/features/dashboard/view/dashboard_root.dart' show DashboardRoot;
 import 'package:fytlyf/src/features/dashboard/view/workout_screen.dart' show WorkoutScreen;
 import 'package:fytlyf/src/features/dashboard/view/community_screen.dart' show CommunityScreen;
-import 'package:fytlyf/src/features/dashboard/view/nutrition_screen.dart' show NutritionScreen;
+import 'package:fytlyf/src/features/dashboard/nutritions/nutrition_screen.dart' show NutritionScreen;
 import 'package:fytlyf/src/features/dashboard/view/rewards_screen.dart' show RewardsScreen;
 import 'package:go_router/go_router.dart';
 

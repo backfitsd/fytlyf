@@ -1,4 +1,4 @@
-// file: lib/src/features/dashboard/view/meal_tracking_screen.dart
+// file: lib/src/features/dashboard/nutritions/meal_tracking_screen.dart
 import 'package:flutter/material.dart';
 
 class MealTrackingScreen extends StatefulWidget {

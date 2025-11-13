@@ -1,11 +1,14 @@
-// file: lib/src/features/dashboard/view/nutrition_screen.dart
+// file: lib/src/features/dashboard/nutritions/nutrition_screen.dart
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:iconsax/iconsax.dart';
 import 'package:flutter/cupertino.dart';
 
-// Import the new meal tracking screen (same folder)
+// import other screens from same folder
 import 'meal_tracking_screen.dart';
+import 'recommend_screen.dart';
+import 'recipe_screen.dart';
+import 'ai_meal_planner_screen.dart';
 
 class NutritionScreen extends StatefulWidget {
   const NutritionScreen({super.key});
@@ -17,7 +20,6 @@ class NutritionScreen extends StatefulWidget {
 class _NutritionScreenState extends State<NutritionScreen> with SingleTickerProviderStateMixin {
   late final AnimationController _ctrl;
 
-  // App gradient (re-used)
   static const LinearGradient _appGradient = LinearGradient(
     colors: [
       Color(0xFFFF3D00),
@@ -28,7 +30,6 @@ class _NutritionScreenState extends State<NutritionScreen> with SingleTickerProv
     end: Alignment.bottomRight,
   );
 
-  // Hydration state (copied behavior from Dashboard)
   double currentWater = 1.2; // example starting liters
   final double goalWater = 2.5;
 
@@ -39,8 +40,6 @@ class _NutritionScreenState extends State<NutritionScreen> with SingleTickerProv
       vsync: this,
       duration: const Duration(milliseconds: 900),
     );
-
-    // start animation on mount
     _ctrl.forward();
   }
 
@@ -50,7 +49,6 @@ class _NutritionScreenState extends State<NutritionScreen> with SingleTickerProv
     super.dispose();
   }
 
-  // ---------- Water popup (same as before) ----------
   void _showWaterPopup(BuildContext context) {
     double tempWater = currentWater;
     int selectedAmount = 250;
@@ -105,12 +103,9 @@ class _NutritionScreenState extends State<NutritionScreen> with SingleTickerProv
                         ),
                       ],
                     ),
-
                     SizedBox(height: height * 0.02),
-
                     Row(
                       children: [
-                        /// LEFT SIDE – CIRCLE PROGRESS
                         Expanded(
                           flex: 5,
                           child: Column(
@@ -149,8 +144,6 @@ class _NutritionScreenState extends State<NutritionScreen> with SingleTickerProv
                             ],
                           ),
                         ),
-
-                        /// RIGHT SIDE – WHEEL + BUTTONS
                         Expanded(
                           flex: 5,
                           child: Column(
@@ -163,10 +156,7 @@ class _NutritionScreenState extends State<NutritionScreen> with SingleTickerProv
                                   color: Colors.black87,
                                 ),
                               ),
-
                               SizedBox(height: height * 0.01),
-
-                              /// Wheel (3 visible items)
                               SizedBox(
                                 height: wheelVisibleHeight,
                                 child: ListWheelScrollView.useDelegate(
@@ -205,10 +195,7 @@ class _NutritionScreenState extends State<NutritionScreen> with SingleTickerProv
                                   ),
                                 ),
                               ),
-
                               SizedBox(height: height * 0.015),
-
-                              /// - and + buttons (Option B)
                               Row(
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
@@ -256,9 +243,7 @@ class _NutritionScreenState extends State<NutritionScreen> with SingleTickerProv
                         ),
                       ],
                     ),
-
                     SizedBox(height: height * 0.02),
-
                     _exploreButton(
                       context,
                       onTap: () {
@@ -309,7 +294,6 @@ class _NutritionScreenState extends State<NutritionScreen> with SingleTickerProv
     );
   }
 
-  // ✅ Updated gradient explore button (same for both popups)
   Widget _exploreButton(BuildContext context, {VoidCallback? onTap}) {
     return SizedBox(
       width: double.infinity,
@@ -320,15 +304,7 @@ class _NutritionScreenState extends State<NutritionScreen> with SingleTickerProv
           padding: const EdgeInsets.symmetric(vertical: 14),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(14),
-            gradient: const LinearGradient(
-              colors: [
-                Color(0xFFFF3D00),
-                Color(0xFFFF6D00),
-                Color(0xFFFFA726),
-              ],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
+            gradient: _appGradient,
             boxShadow: [
               BoxShadow(
                 color: Colors.black.withOpacity(0.08),
@@ -352,24 +328,53 @@ class _NutritionScreenState extends State<NutritionScreen> with SingleTickerProv
     );
   }
 
-  // ---------- UI build (rings animate using _ctrl) ----------
+  Widget _featureCard({
+    required double width,
+    required double height,
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: width,
+        height: height,
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(14),
+          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 8, offset: const Offset(0, 4))],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(icon, size: 28, color: Colors.black54),
+            const SizedBox(height: 8),
+            Text(title, style: const TextStyle(fontWeight: FontWeight.w700)),
+            const SizedBox(height: 6),
+            Text(subtitle, style: const TextStyle(fontSize: 12, color: Colors.black45)),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final size = MediaQuery.of(context).size;
     final isPortrait = size.height >= size.width;
 
-    // Adaptive card height
     final double cardHeight = (isPortrait
         ? size.height.clamp(560.0, 1000.0) * 0.25 * 1.2
         : size.height.clamp(360.0, 800.0) * 0.35 * 1.2)
         .toDouble();
 
-    // Example progress (replace with your data)
     const int current = 1250;
     const int goal = 2500;
     final double progressRaw = current / goal;
 
-    // Dynamic motivational line based on progress
     String _motivation(double p) {
       if (p <= 0.15) return "A true start is a gentle one.\nSmall steps build strong habits.";
       if (p <= 0.35) return "Good momentum.\nKeep choices steady and simple.";
@@ -386,7 +391,6 @@ class _NutritionScreenState extends State<NutritionScreen> with SingleTickerProv
           padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
           child: Column(
             children: [
-              // ---------- Header (now with app gradient) ----------
               Material(
                 elevation: 5,
                 shadowColor: Colors.black.withOpacity(0.06),
@@ -421,11 +425,9 @@ class _NutritionScreenState extends State<NutritionScreen> with SingleTickerProv
               ),
               const SizedBox(height: 10),
 
-              // ---------- Main Row ----------
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // ===== First Card: Calorie Progress =====
                   Expanded(
                     flex: 4,
                     child: Card(
@@ -442,7 +444,6 @@ class _NutritionScreenState extends State<NutritionScreen> with SingleTickerProv
                               final cw = constraints.maxWidth;
                               final ch = constraints.maxHeight;
 
-                              // Progress ring sizing
                               double ringSize = (min(cw, ch) * 0.65 * 1.2 * 1.2)
                                   .clamp(90.0, min(cw * 0.98, ch * 0.98));
                               final double ringWidth = (ringSize * 0.07).clamp(3.0, 7.0).toDouble();
@@ -455,10 +456,7 @@ class _NutritionScreenState extends State<NutritionScreen> with SingleTickerProv
                                 crossAxisAlignment: CrossAxisAlignment.center,
                                 mainAxisAlignment: MainAxisAlignment.start,
                                 children: [
-                                  // Top gap
                                   SizedBox(height: vGapSmall * 0.5),
-
-                                  // Title
                                   const Text(
                                     'Calorie',
                                     style: TextStyle(
@@ -467,10 +465,7 @@ class _NutritionScreenState extends State<NutritionScreen> with SingleTickerProv
                                       color: Colors.black87,
                                     ),
                                   ),
-
                                   SizedBox(height: vGapSmall * 1.4 * 1.1),
-
-                                  // Animated ring (use AnimatedBuilder)
                                   Center(
                                     child: AnimatedBuilder(
                                       animation: _ctrl,
@@ -488,10 +483,7 @@ class _NutritionScreenState extends State<NutritionScreen> with SingleTickerProv
                                       },
                                     ),
                                   ),
-
                                   SizedBox(height: vGapSmall * 1.3 * 1.2),
-
-                                  // Progress text
                                   FittedBox(
                                     fit: BoxFit.scaleDown,
                                     child: Text(
@@ -503,10 +495,7 @@ class _NutritionScreenState extends State<NutritionScreen> with SingleTickerProv
                                       ),
                                     ),
                                   ),
-
                                   const Spacer(),
-
-                                  // Motivational line at the BOTTOM of the 1st card
                                   Padding(
                                     padding: const EdgeInsets.only(top: 8.0, bottom: 2.0),
                                     child: Text(
@@ -533,7 +522,6 @@ class _NutritionScreenState extends State<NutritionScreen> with SingleTickerProv
 
                   const SizedBox(width: 8),
 
-                  // ===== Second Card: Nutrients =====
                   Expanded(
                     flex: 6,
                     child: Card(
@@ -611,7 +599,6 @@ class _NutritionScreenState extends State<NutritionScreen> with SingleTickerProv
                                   ),
                                 );
 
-                                // Make the water cell tappable to open popup
                                 if (isWaterCell) {
                                   return GestureDetector(
                                     onTap: () => _showWaterPopup(context),
@@ -635,7 +622,6 @@ class _NutritionScreenState extends State<NutritionScreen> with SingleTickerProv
                                   children: [
                                     buildCell('Fat', Iconsax.coffee, 0.48, '45/70g', const Color(0xFFFB8C00)),
                                     const SizedBox(width: hGap),
-                                    // For Water, pass dynamic target progress based on currentWater/goalWater
                                     buildCell('Water', Iconsax.glass, (currentWater / goalWater).clamp(0.0, 1.0), '1.2/2.5L', const Color(0xFF64B5FF)),
                                   ],
                                 ),
@@ -651,11 +637,9 @@ class _NutritionScreenState extends State<NutritionScreen> with SingleTickerProv
 
               const SizedBox(height: 14),
 
-              // ---------- Buttons ROW (outside the cards) ----------
               Row(
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  // Align left button under the calorie card (flex 4)
                   Expanded(
                     flex: 4,
                     child: Align(
@@ -674,10 +658,7 @@ class _NutritionScreenState extends State<NutritionScreen> with SingleTickerProv
                       ),
                     ),
                   ),
-
                   const SizedBox(width: 8),
-
-                  // Align right button under the nutrients card (flex 5)
                   Expanded(
                     flex: 5,
                     child: Align(
@@ -687,7 +668,7 @@ class _NutritionScreenState extends State<NutritionScreen> with SingleTickerProv
                         height: 48,
                         child: GradientBorderButton(
                           gradient: _appGradient,
-                          onPressed: () => _showWaterPopup(context), // <-- wired to popup
+                          onPressed: () => _showWaterPopup(context),
                           icon: const Icon(Icons.local_drink, size: 18, color: Colors.blue),
                           label: const Text('Add Water Intake', style: TextStyle(fontWeight: FontWeight.w600, color: Colors.black87)),
                         ),
@@ -699,61 +680,18 @@ class _NutritionScreenState extends State<NutritionScreen> with SingleTickerProv
 
               const SizedBox(height: 18),
 
-              // ---------- NEW: Meal Tracking (empty boxes only) ----------
+              // ---------- Meal Tracking: 4 tappable feature cards ----------
               LayoutBuilder(builder: (context, layoutConstraints) {
                 final double availableWidth = layoutConstraints.maxWidth;
                 const double hSpacing = 12.0;
                 final double cardWidth = (availableWidth - hSpacing) / 2;
-                // proportional height — tweak multiplier if you want taller/shorter boxes
-                final double cardHeight = (cardWidth * 0.45).clamp(100.0, 150.0);
-
-                Widget emptyCard() {
-                  return Container(
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(14),
-                      boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 8, offset: const Offset(0, 4))],
-                      border: Border.all(color: Colors.transparent),
-                    ),
-                  );
-                }
-
-                // First card will act as Meal Planner trigger — show a plus label/icon
-                Widget mealPlannerCard() {
-                  return GestureDetector(
-                    onTap: () {
-                      // Navigate to the dedicated Meal Tracking screen you requested
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (_) => const MealTrackingScreen()),
-                      );
-                    },
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(14),
-                        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 8, offset: const Offset(0, 4))],
-                      ),
-                      padding: const EdgeInsets.all(12),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Icon(Icons.restaurant_menu_outlined, size: 28, color: Colors.black54),
-                          const SizedBox(height: 8),
-                          const Text('Meal Planner', style: TextStyle(fontWeight: FontWeight.w700)),
-                          const SizedBox(height: 6),
-                          const Text('Tap to open meal tracking', style: TextStyle(fontSize: 12, color: Colors.black45)),
-                        ],
-                      ),
-                    ),
-                  );
-                }
+                final double cardHeight = (cardWidth * 0.55).clamp(100.0, 160.0);
 
                 return Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Padding(
-                      padding: const EdgeInsets.only(left: 4.0, bottom: 8.0),
+                    const Padding(
+                      padding: EdgeInsets.only(left: 4.0, bottom: 8.0),
                       child: Text(
                         'Meal Tracking',
                         style: TextStyle(
@@ -768,11 +706,45 @@ class _NutritionScreenState extends State<NutritionScreen> with SingleTickerProv
                       spacing: hSpacing,
                       runSpacing: 12,
                       children: [
-                        // top-left tappable meal planner
-                        SizedBox(width: cardWidth, height: cardHeight, child: mealPlannerCard()),
-                        SizedBox(width: cardWidth, height: cardHeight, child: emptyCard()),
-                        SizedBox(width: cardWidth, height: cardHeight, child: emptyCard()),
-                        SizedBox(width: cardWidth, height: cardHeight, child: emptyCard()),
+                        // 1. Meal Planner (top-left)
+                        _featureCard(
+                          width: cardWidth,
+                          height: cardHeight,
+                          icon: Icons.restaurant_menu_outlined,
+                          title: 'Meal Planner',
+                          subtitle: 'Track Breakfast/Lunch/Snack/Dinner',
+                          onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const MealTrackingScreen())),
+                        ),
+
+                        // 2. Recommend for you (top-right) -> recommend_screen.dart
+                        _featureCard(
+                          width: cardWidth,
+                          height: cardHeight,
+                          icon: Icons.thumb_up_alt_outlined,
+                          title: 'Recommend for you',
+                          subtitle: 'Personalized meal suggestions',
+                          onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const RecommendScreen())),
+                        ),
+
+                        // 3. Recipes (bottom-left) -> recipe_screen.dart
+                        _featureCard(
+                          width: cardWidth,
+                          height: cardHeight,
+                          icon: Icons.book_outlined,
+                          title: 'Recipes',
+                          subtitle: 'Browse healthy recipes',
+                          onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const RecipeScreen())),
+                        ),
+
+                        // 4. AI Meal Planner (bottom-right) -> ai_meal_planner_screen.dart
+                        _featureCard(
+                          width: cardWidth,
+                          height: cardHeight,
+                          icon: Icons.smart_toy_outlined,
+                          title: 'AI Meal Planner',
+                          subtitle: 'Auto-generate weekly plans',
+                          onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AiMealPlannerScreen())),
+                        ),
                       ],
                     ),
 
@@ -809,7 +781,6 @@ class GradientBorderButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Outer gradient stroke container; inner is white button surface
     return GestureDetector(
       onTap: onPressed,
       child: Container(
@@ -849,13 +820,12 @@ class GradientBorderButton extends StatelessWidget {
 }
 
 Color _calorieSolidColor(double p) {
-  if (p <= 0.2) return const Color(0xFFFFD54F); // yellow
-  if (p <= 0.6) return const Color(0xFFFB8C00); // orange
-  if (p <= 1.0) return const Color(0xFFE53935); // red
-  return const Color(0xFFB71C1C); // deep red (overflow)
+  if (p <= 0.2) return const Color(0xFFFFD54F);
+  if (p <= 0.6) return const Color(0xFFFB8C00);
+  if (p <= 1.0) return const Color(0xFFE53935);
+  return const Color(0xFFB71C1C);
 }
 
-/// ----- Solid ring with center icon -----
 class _SolidRingWithIcon extends StatelessWidget {
   final double size, ringWidth, progress, iconSize;
   final Color baseColor, ringColor;
@@ -864,7 +834,7 @@ class _SolidRingWithIcon extends StatelessWidget {
   const _SolidRingWithIcon({
     required this.size,
     required this.ringWidth,
-    required this.progress, // 0..1 (animated)
+    required this.progress,
     required this.baseColor,
     required this.ringColor,
     required this.icon,
@@ -896,7 +866,7 @@ class _SolidRingWithIcon extends StatelessWidget {
 }
 
 class _SolidRingPainter extends CustomPainter {
-  final double progress; // 0..1
+  final double progress;
   final double ringWidth;
   final Color ringColor;
   final Color baseColor;
@@ -939,7 +909,7 @@ class _SolidRingPainter extends CustomPainter {
   }
 }
 
-/// -------------------- Meal card widget --------------------
+/// -------------------- Meal card widget (unchanged) --------------------
 class _MealCard extends StatelessWidget {
   final String title;
   final int kcal;
@@ -968,7 +938,6 @@ class _MealCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Visual style similar to the provided image (compact, rounded)
     return GestureDetector(
       onTap: onTap,
       child: Container(
@@ -980,14 +949,12 @@ class _MealCard extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
         child: Row(
           children: [
-            // image / icon circle
             CircleAvatar(
               radius: 26,
               backgroundColor: Colors.grey.shade100,
               child: Icon(leadingIcon, size: 26, color: Colors.black87),
             ),
             const SizedBox(width: 12),
-            // details
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -996,10 +963,9 @@ class _MealCard extends StatelessWidget {
                   const SizedBox(height: 6),
                   Text('$kcal kcal', style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 13)),
                   const SizedBox(height: 6),
-                  // small progress indicator bar
                   LayoutBuilder(builder: (context, constraints) {
                     final double barWidth = constraints.maxWidth;
-                    final double used = (kcal / 800).clamp(0.06, 1.0); // arbitrary visual ratio
+                    final double used = (kcal / 800).clamp(0.06, 1.0);
                     return Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [

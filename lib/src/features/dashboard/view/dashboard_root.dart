@@ -3,7 +3,7 @@ import 'widgets/bottom_nav_bar.dart';
 import 'dashboard_screen.dart';
 import 'workout_screen.dart';
 import 'community_screen.dart';
-import 'nutrition_screen.dart';
+import '../nutritions/nutrition_screen.dart';
 import 'rewards_screen.dart';
 
 class DashboardRoot extends StatefulWidget {
