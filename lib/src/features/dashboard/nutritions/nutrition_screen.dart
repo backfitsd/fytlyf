@@ -382,9 +382,11 @@ class _NutritionScreenState extends State<NutritionScreen> with SingleTickerProv
       } else {
         imageWidget = Image.asset(
           imagePath,
-          fit: BoxFit.cover, // ensure image covers the box
+          fit: BoxFit.cover,
           width: double.infinity,
           height: imageHeight,
+          gaplessPlayback: true, // <-- instantly displays old frame before new one
+          cacheWidth: 400,       // <-- pre-decodes smaller image for faster render
           errorBuilder: (ctx, err, st) => Container(
             width: double.infinity,
             height: imageHeight,
