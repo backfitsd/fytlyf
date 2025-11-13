@@ -557,7 +557,13 @@ class _NutritionScreenState extends State<NutritionScreen> with SingleTickerProv
                               (ringSize * 0.23 * 0.8 * 1.1).clamp(9.0, 15.0).toDouble();
 
                               Widget buildCell(String title, IconData icon, double targetProgress, String value, Color color) {
-                                return SizedBox(
+                                final bool isWaterCell = title.toLowerCase() == 'water';
+                                final String displayValue = isWaterCell
+                                    ? '${currentWater.toStringAsFixed(1)}/${goalWater.toStringAsFixed(1)}L'
+                                    : value;
+                                final double progressForCell = targetProgress;
+
+                                Widget content = SizedBox(
                                   width: colWidth,
                                   height: rowHeight,
                                   child: Column(
@@ -578,7 +584,7 @@ class _NutritionScreenState extends State<NutritionScreen> with SingleTickerProv
                                       AnimatedBuilder(
                                         animation: _ctrl,
                                         builder: (context, _) {
-                                          final animatedProgress = (_ctrl.value * targetProgress).clamp(0.0, 1.0);
+                                          final animatedProgress = (_ctrl.value * progressForCell).clamp(0.0, 1.0);
                                           return _SolidRingWithIcon(
                                             size: ringSize,
                                             ringWidth: ringWidth,
@@ -594,13 +600,23 @@ class _NutritionScreenState extends State<NutritionScreen> with SingleTickerProv
                                       FittedBox(
                                         fit: BoxFit.scaleDown,
                                         child: Text(
-                                          value,
+                                          displayValue,
                                           style: TextStyle(fontSize: valueSize, color: Colors.black87),
                                         ),
                                       ),
                                     ],
                                   ),
                                 );
+
+                                // Make the water cell tappable to open popup
+                                if (isWaterCell) {
+                                  return GestureDetector(
+                                    onTap: () => _showWaterPopup(context),
+                                    child: content,
+                                  );
+                                } else {
+                                  return content;
+                                }
                               }
 
                               return Column(children: [
@@ -616,7 +632,8 @@ class _NutritionScreenState extends State<NutritionScreen> with SingleTickerProv
                                   children: [
                                     buildCell('Fat', Iconsax.coffee, 0.48, '45/70g', const Color(0xFFFB8C00)),
                                     const SizedBox(width: hGap),
-                                    buildCell('Water', Iconsax.glass, 0.60, '1.2/2.5L', const Color(0xFF64B5FF)),
+                                    // For Water, pass dynamic target progress based on currentWater/goalWater
+                                    buildCell('Water', Iconsax.glass, (currentWater / goalWater).clamp(0.0, 1.0), '1.2/2.5L', const Color(0xFF64B5FF)),
                                   ],
                                 ),
                               ]);
@@ -754,7 +771,6 @@ Color _calorieSolidColor(double p) {
 }
 
 /// ----- Solid ring with center icon -----
-/// This painter remains the same, but the `progress` parameter is now animated from parent.
 class _SolidRingWithIcon extends StatelessWidget {
   final double size, ringWidth, progress, iconSize;
   final Color baseColor, ringColor;

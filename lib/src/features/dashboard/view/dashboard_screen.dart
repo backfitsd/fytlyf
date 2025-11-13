@@ -898,7 +898,9 @@ class _DashboardScreenState extends State<DashboardScreen>
                               ),
                               child: Column(
                                 mainAxisAlignment: MainAxisAlignment.center,
+                                crossAxisAlignment: CrossAxisAlignment.center,
                                 children: [
+                                  SizedBox(height: 8),
                                   Stack(
                                     alignment: Alignment.center,
                                     children: [
@@ -909,8 +911,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                                           value: targetValue,
                                           backgroundColor:
                                           iconColor.withOpacity(0.15),
-                                          valueColor:
-                                          AlwaysStoppedAnimation(iconColor),
+                                          valueColor: AlwaysStoppedAnimation(iconColor),
                                           strokeWidth: 5,
                                         ),
                                       ),
