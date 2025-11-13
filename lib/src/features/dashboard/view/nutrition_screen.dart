@@ -26,11 +26,20 @@ class NutritionScreen extends StatelessWidget {
     String _motivation(double p) {
       if (p <= 0.15) return "A true start is a gentle one.\nSmall steps build strong habits.";
       if (p <= 0.35) return "Good momentum.\nKeep choices steady and simple.";
-      if (p <= 0.6)  return "Great balance.\nFuel up and stay consistent.";
+      if (p <= 0.6) return "Great balance.\nFuel up and stay consistent.";
       if (p <= 0.85) return "Strong progress.\nAlign the next meal to your goal.";
-      if (p <= 1.0)  return "Right on target.\nTiny tweaks make perfect days.";
+      if (p <= 1.0) return "Right on target.\nTiny tweaks make perfect days.";
       return "You’re above target.\nGo lighter now and hydrate well.";
     }
+
+    // Common button style
+    final ButtonStyle btnStyle = OutlinedButton.styleFrom(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      side: BorderSide(color: Colors.black.withOpacity(0.08)),
+      foregroundColor: Colors.black87,
+      minimumSize: const Size(64, 44),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+    );
 
     return Scaffold(
       backgroundColor: const Color(0xFFF4F7FB),
@@ -39,20 +48,45 @@ class NutritionScreen extends StatelessWidget {
           padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
           child: Column(
             children: [
-              // ---------- Header ----------
-              Card(
+              // ---------- Header (now with app gradient) ----------
+              Material(
                 elevation: 5,
-                color: Colors.white,
                 shadowColor: Colors.black.withOpacity(0.06),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: const [
-                      Text('Nutrition', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700)),
-                      Text('Today, Nov 10', style: TextStyle(fontSize: 15, color: Colors.black54)),
-                    ],
+                // make Material transparent so gradient from Container is visible
+                color: Colors.transparent,
+                child: Container(
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(22),
+                    gradient: const LinearGradient(
+                      colors: [
+                        Color(0xFFFF3D00),
+                        Color(0xFFFF6D00),
+                        Color(0xFFFFA726),
+                      ],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: const [
+                        Text(
+                          'Nutrition',
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.w700,
+                            color: Colors.white,
+                          ),
+                        ),
+                        Text(
+                          'Today, Nov 10',
+                          style: TextStyle(fontSize: 15, color: Colors.white70),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),
@@ -137,7 +171,7 @@ class NutritionScreen extends StatelessWidget {
                                     ),
                                   ),
 
-                                  // Push the motivational text to the very bottom of the card
+                                  // push motivation to bottom
                                   const Spacer(),
 
                                   // Motivational line at the BOTTOM of the 1st card
@@ -147,7 +181,7 @@ class NutritionScreen extends StatelessWidget {
                                       _motivation(progressRaw),
                                       textAlign: TextAlign.center,
                                       softWrap: true,
-                                      maxLines: 3, // will wrap like your example
+                                      maxLines: 3,
                                       overflow: TextOverflow.visible,
                                       style: const TextStyle(
                                         fontSize: 13.5,
@@ -194,8 +228,7 @@ class NutritionScreen extends StatelessWidget {
                               final double valueSize =
                               (ringSize * 0.23 * 0.8 * 1.1).clamp(9.0, 15.0).toDouble();
 
-                              Widget buildCell(String title, IconData icon, double progress,
-                                  String value, Color color) {
+                              Widget buildCell(String title, IconData icon, double progress, String value, Color color) {
                                 return SizedBox(
                                   width: colWidth,
                                   height: rowHeight,
@@ -221,8 +254,7 @@ class NutritionScreen extends StatelessWidget {
                                         baseColor: const Color(0xFFE8F2FF),
                                         ringColor: color,
                                         icon: icon,
-                                        iconSize:
-                                        (ringSize * 0.42).clamp(16.0, ringSize * 0.55).toDouble(),
+                                        iconSize: (ringSize * 0.42).clamp(16.0, ringSize * 0.55).toDouble(),
                                       ),
                                       const SizedBox(height: 8),
                                       FittedBox(
@@ -240,21 +272,17 @@ class NutritionScreen extends StatelessWidget {
                               return Column(children: [
                                 Row(
                                   children: [
-                                    buildCell('Protein', Iconsax.cup, 0.55, '65/120g',
-                                        const Color(0xFF42A5F5)),
+                                    buildCell('Protein', Iconsax.cup, 0.55, '65/120g', const Color(0xFF42A5F5)),
                                     const SizedBox(width: hGap),
-                                    buildCell('Carbs', Iconsax.ranking, 0.72, '180/250g',
-                                        const Color(0xFF66BB6A)),
+                                    buildCell('Carbs', Iconsax.ranking, 0.72, '180/250g', const Color(0xFF66BB6A)),
                                   ],
                                 ),
                                 const SizedBox(height: vGap),
                                 Row(
                                   children: [
-                                    buildCell('Fat', Iconsax.coffee, 0.48, '45/70g',
-                                        const Color(0xFFFB8C00)),
+                                    buildCell('Fat', Iconsax.coffee, 0.48, '45/70g', const Color(0xFFFB8C00)),
                                     const SizedBox(width: hGap),
-                                    buildCell('Water', Iconsax.glass, 0.60, '1.2/2.5L',
-                                        const Color(0xFF64B5FF)),
+                                    buildCell('Water', Iconsax.glass, 0.60, '1.2/2.5L', const Color(0xFF64B5FF)),
                                   ],
                                 ),
                               ]);
@@ -266,6 +294,59 @@ class NutritionScreen extends StatelessWidget {
                   ),
                 ],
               ),
+
+              const SizedBox(height: 14),
+
+              // ---------- Buttons ROW (outside the cards) ----------
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  // Align left button under the calorie card (flex 4)
+                  Expanded(
+                    flex: 4,
+                    child: Align(
+                      alignment: Alignment.centerLeft,
+                      child: SizedBox(
+                        // limit width so it doesn't overflow in narrow screens
+                        width: min(160, size.width * 0.36),
+                        height: 48,
+                        child: OutlinedButton.icon(
+                          onPressed: () {
+                            // TODO: implement add meal
+                          },
+                          icon: const Icon(Icons.add, size: 18),
+                          label: const Text('Add Meal', style: TextStyle(fontWeight: FontWeight.w600)),
+                          style: btnStyle,
+                        ),
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(width: 8),
+
+                  // Align right button under the nutrients card (flex 6)
+                  Expanded(
+                    flex: 6,
+                    child: Align(
+                      alignment: Alignment.centerLeft,
+                      child: SizedBox(
+                        width: min(320, size.width * 0.53), // wider button as in your screenshot
+                        height: 48,
+                        child: OutlinedButton.icon(
+                          onPressed: () {
+                            // TODO: implement add water intake
+                          },
+                          icon: const Icon(Icons.local_drink, size: 18, color: Colors.blue,),
+                          label: const Text('Add Water Intake', style: TextStyle(fontWeight: FontWeight.w600)),
+                          style: btnStyle,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+
+              const SizedBox(height: 18),
             ],
           ),
         ),

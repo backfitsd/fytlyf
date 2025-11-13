@@ -288,41 +288,57 @@ class _AuthEntryScreenState extends State<AuthEntryScreen> with TickerProviderSt
     setState(() => _loading = true);
     try {
       final googleSignIn = GoogleSignIn();
-      await googleSignIn.signOut(); // ensure chooser appears
+      await googleSignIn.signOut(); // ensure chooser
       final google = await googleSignIn.signIn();
       if (google == null) {
         setState(() => _loading = false);
         return;
       }
-      final auth = await google.authentication;
-      final credential = GoogleAuthProvider.credential(idToken: auth.idToken, accessToken: auth.accessToken);
-      final cred = await FirebaseAuth.instance.signInWithCredential(credential);
-      final uid = cred.user!.uid;
 
-      final exists = await _userDocExists(uid);
-      if (!exists) {
-        await FirebaseAuth.instance.signOut();
-        _setError('Account not registered. Please sign up.');
+      final auth = await google.authentication;
+      final credential = GoogleAuthProvider.credential(
+        idToken: auth.idToken,
+        accessToken: auth.accessToken,
+      );
+
+      final cred = await FirebaseAuth.instance.signInWithCredential(credential);
+      final uid = cred.user?.uid;
+
+      if (uid == null) {
+        _setError('Login failed. Please try again.');
         return;
       }
+
+      final exists = await _userDocExists(uid);
+
+      if (!exists) {
+        // if Firestore doc doesn’t exist, send user to signup (not error)
+        context.go('/auth/entry', extra: {'initialTab': 'signup'});
+        _setError('No account found. Please sign up.');
+        await FirebaseAuth.instance.signOut();
+        return;
+      }
+
+      // ✅ Successfully logged in — navigate to dashboard
       if (!mounted) return;
       context.go('/dashboard-root');
     } on FirebaseAuthException catch (e) {
-      // specific Firebase auth errors -> show clearer messages
-      if (e.code == 'account-exists-with-different-credential' || e.code == 'email-already-in-use') {
-        _setError('This email is already registered with another sign-in method. Please use that method or reset password.');
+      if (e.code == 'account-exists-with-different-credential' ||
+          e.code == 'email-already-in-use') {
+        _setError('This email is already registered with another method.');
       } else if (e.code == 'user-disabled') {
         _setError('This user account has been disabled.');
       } else {
         _setError(e.message ?? 'Authentication failed. Please try again.');
       }
     } catch (e) {
-      // generic
-      _setError('Something went wrong.');
+      debugPrint('Google login error: $e');
+      _setError('Something went wrong. Please check your network and try again.');
     } finally {
       if (mounted) setState(() => _loading = false);
     }
   }
+
 
   Future<void> _googleSignup() async {
     final uname = _username.text.trim().toLowerCase();
