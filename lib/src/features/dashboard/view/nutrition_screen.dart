@@ -51,41 +51,11 @@ class _NutritionScreenState extends State<NutritionScreen> with SingleTickerProv
   void _showWaterPopup(BuildContext context) {
     double tempWater = currentWater;
     int selectedAmount = 250;
-    final int maxAmount = 500;
-    final int step = 10;
+    const int maxAmount = 500;
+    const int step = 10;
+
     final scrollController =
     FixedExtentScrollController(initialItem: selectedAmount ~/ step);
-
-    void _showCupertinoConfirm(String action, VoidCallback onConfirm) {
-      showCupertinoModalPopup(
-        context: context,
-        builder: (BuildContext context) => CupertinoActionSheet(
-          title: Text("Confirm $action",
-              style: const TextStyle(fontWeight: FontWeight.w700)),
-          message: Text(
-            "Are you sure you want to $action ${selectedAmount} ml of water?",
-            style: const TextStyle(fontSize: 15, color: Colors.black87),
-          ),
-          actions: [
-            CupertinoActionSheetAction(
-              onPressed: onConfirm,
-              isDefaultAction: true,
-              child: Text("Yes, $action",
-                  style: const TextStyle(
-                      color: Colors.blueAccent,
-                      fontWeight: FontWeight.w600,
-                      fontSize: 16)),
-            ),
-          ],
-          cancelButton: CupertinoActionSheetAction(
-            onPressed: () => Navigator.pop(context),
-            isDestructiveAction: true,
-            child: const Text("Cancel",
-                style: TextStyle(color: Colors.redAccent, fontSize: 15)),
-          ),
-        ),
-      );
-    }
 
     showDialog(
       context: context,
@@ -93,128 +63,214 @@ class _NutritionScreenState extends State<NutritionScreen> with SingleTickerProv
         final size = MediaQuery.of(context).size;
         final width = size.width;
         final height = size.height;
-        final double adaptiveIconSize = width * 0.055;
 
-        return StatefulBuilder(builder: (context, setState) {
-          double progress = (tempWater / goalWater).clamp(0.0, 1.0);
+        final wheelItemExtent = height * 0.03;
+        final wheelVisibleHeight = wheelItemExtent * 3;
 
-          return Dialog(
-            insetPadding: EdgeInsets.symmetric(horizontal: width * 0.08),
-            backgroundColor: Colors.white,
-            shape:
-            RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-            child: Padding(
-              padding: EdgeInsets.all(width * 0.05),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Row(
+        return StatefulBuilder(
+          builder: (context, dialogSetState) {
+            double progress = (tempWater / goalWater).clamp(0.0, 1.0);
+
+            return Dialog(
+              insetPadding: EdgeInsets.symmetric(horizontal: width * 0.08),
+              backgroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Padding(
+                padding: EdgeInsets.all(width * 0.05),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text("Hydration",
-                            style: TextStyle(
-                                fontSize: width * 0.05,
-                                fontWeight: FontWeight.w800,
-                                color: Colors.black87)),
-                        Text("Today, Nov 10",
-                            style: TextStyle(
-                                fontSize: width * 0.035,
-                                fontWeight: FontWeight.w500,
-                                color: Colors.black54)),
-                      ]),
-                  SizedBox(height: height * 0.02),
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      Expanded(
+                        Text(
+                          "Hydration",
+                          style: TextStyle(
+                            fontSize: width * 0.05,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                        Text(
+                          "Today, Nov 10",
+                          style: TextStyle(
+                            fontSize: width * 0.035,
+                            fontWeight: FontWeight.w500,
+                            color: Colors.black54,
+                          ),
+                        ),
+                      ],
+                    ),
+
+                    SizedBox(height: height * 0.02),
+
+                    Row(
+                      children: [
+                        /// LEFT SIDE – CIRCLE PROGRESS
+                        Expanded(
                           flex: 5,
-                          child: Column(children: [
-                            Stack(alignment: Alignment.center, children: [
-                              SizedBox(
-                                height: width * 0.35,
-                                width: width * 0.35,
-                                child: CircularProgressIndicator(
-                                  value: progress,
-                                  strokeWidth: 9,
-                                  backgroundColor:
-                                  Colors.blueAccent.withOpacity(0.15),
-                                  valueColor: const AlwaysStoppedAnimation(
-                                      Colors.blueAccent),
-                                ),
-                              ),
-                              Icon(Icons.water_drop_rounded,
-                                  size: adaptiveIconSize * 1.1,
-                                  color: Colors.blueAccent),
-                            ]),
-                            SizedBox(height: height * 0.015),
-                            Text(
-                              "${tempWater.toStringAsFixed(1)}L / ${goalWater.toStringAsFixed(1)}L",
-                              style: TextStyle(
-                                  fontSize: width * 0.037,
-                                  fontWeight: FontWeight.w700),
-                            ),
-                          ])),
-                      Expanded(
-                          flex: 5,
-                          child: Column(children: [
-                            Text("Select water (ml)",
-                                style: TextStyle(
-                                    fontSize: width * 0.035,
-                                    fontWeight: FontWeight.w600,
-                                    color: Colors.black87)),
-                            SizedBox(height: height * 0.01),
-                            SizedBox(
-                              height: height * 0.12,
-                              child: ListWheelScrollView.useDelegate(
-                                controller: scrollController,
-                                itemExtent: height * 0.03,
-                                physics: const FixedExtentScrollPhysics(),
-                                overAndUnderCenterOpacity: 0.5,
-                                onSelectedItemChanged: (index) {
-                                  setState(() {
-                                    selectedAmount = index * step;
-                                  });
-                                },
-                                childDelegate: ListWheelChildBuilderDelegate(
-                                  childCount: (maxAmount ~/ step) + 1,
-                                  builder: (context, index) {
-                                    int value = index * step;
-                                    bool isSelected = value == selectedAmount;
-                                    return AnimatedDefaultTextStyle(
-                                      duration:
-                                      const Duration(milliseconds: 150),
-                                      style: TextStyle(
-                                        fontSize: isSelected
-                                            ? width * 0.045
-                                            : width * 0.038,
-                                        fontWeight: isSelected
-                                            ? FontWeight.w800
-                                            : FontWeight.w500,
-                                        color: isSelected
-                                            ? Colors.blueAccent
-                                            : Colors.black38,
+                          child: Column(
+                            children: [
+                              Stack(
+                                alignment: Alignment.center,
+                                children: [
+                                  SizedBox(
+                                    height: width * 0.35,
+                                    width: width * 0.35,
+                                    child: CircularProgressIndicator(
+                                      value: progress,
+                                      strokeWidth: 9,
+                                      backgroundColor:
+                                      Colors.blueAccent.withOpacity(0.15),
+                                      valueColor: const AlwaysStoppedAnimation(
+                                        Colors.blueAccent,
                                       ),
-                                      child: Text("$value ml"),
-                                    );
-                                  },
+                                    ),
+                                  ),
+                                  Icon(
+                                    Icons.water_drop_rounded,
+                                    size: width * 0.06,
+                                    color: Colors.blueAccent,
+                                  ),
+                                ],
+                              ),
+                              SizedBox(height: height * 0.015),
+                              Text(
+                                "${tempWater.toStringAsFixed(1)}L / ${goalWater.toStringAsFixed(1)}L",
+                                style: TextStyle(
+                                  fontSize: width * 0.037,
+                                  fontWeight: FontWeight.w700,
                                 ),
                               ),
-                            ),
-                          ])),
-                    ],
-                  ),
-                  SizedBox(height: height * 0.025),
-                  _exploreButton(context, onTap: () {
-                    setState(() {
-                      currentWater = tempWater;
-                    });
-                    Navigator.pop(context);
-                  }),
-                ],
+                            ],
+                          ),
+                        ),
+
+                        /// RIGHT SIDE – WHEEL + BUTTONS
+                        Expanded(
+                          flex: 5,
+                          child: Column(
+                            children: [
+                              Text(
+                                "Select water (ml)",
+                                style: TextStyle(
+                                  fontSize: width * 0.035,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.black87,
+                                ),
+                              ),
+
+                              SizedBox(height: height * 0.01),
+
+                              /// Wheel (3 visible items)
+                              SizedBox(
+                                height: wheelVisibleHeight,
+                                child: ListWheelScrollView.useDelegate(
+                                  controller: scrollController,
+                                  itemExtent: wheelItemExtent,
+                                  physics: const FixedExtentScrollPhysics(),
+                                  overAndUnderCenterOpacity: 0.5,
+                                  onSelectedItemChanged: (index) {
+                                    dialogSetState(() {
+                                      selectedAmount = index * step;
+                                    });
+                                  },
+                                  childDelegate: ListWheelChildBuilderDelegate(
+                                    childCount: (maxAmount ~/ step) + 1,
+                                    builder: (context, index) {
+                                      int value = index * step;
+                                      bool isSelected = value == selectedAmount;
+
+                                      return AnimatedDefaultTextStyle(
+                                        duration:
+                                        const Duration(milliseconds: 150),
+                                        style: TextStyle(
+                                          fontSize: isSelected
+                                              ? width * 0.045
+                                              : width * 0.038,
+                                          fontWeight: isSelected
+                                              ? FontWeight.w800
+                                              : FontWeight.w500,
+                                          color: isSelected
+                                              ? Colors.blueAccent
+                                              : Colors.black38,
+                                        ),
+                                        child: Text("$value ml"),
+                                      );
+                                    },
+                                  ),
+                                ),
+                              ),
+
+                              SizedBox(height: height * 0.015),
+
+                              /// - and + buttons (Option B)
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  InkWell(
+                                    onTap: () {
+                                      dialogSetState(() {
+                                        tempWater -= selectedAmount / 1000;
+                                        if (tempWater < 0) tempWater = 0;
+                                        setState(() {
+                                          currentWater = double.parse(
+                                              tempWater.toStringAsFixed(1));
+                                        });
+                                      });
+                                    },
+                                    child: const Icon(
+                                      Icons.remove_circle_outline,
+                                      size: 30,
+                                      color: Colors.blueAccent,
+                                    ),
+                                  ),
+                                  SizedBox(width: width * 0.06),
+                                  InkWell(
+                                    onTap: () {
+                                      dialogSetState(() {
+                                        tempWater += selectedAmount / 1000;
+                                        if (tempWater > goalWater) {
+                                          tempWater = goalWater;
+                                        }
+                                        setState(() {
+                                          currentWater = double.parse(
+                                              tempWater.toStringAsFixed(1));
+                                        });
+                                      });
+                                    },
+                                    child: const Icon(
+                                      Icons.add_circle_outline,
+                                      size: 30,
+                                      color: Colors.blueAccent,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+
+                    SizedBox(height: height * 0.02),
+
+                    _exploreButton(
+                      context,
+                      onTap: () {
+                        setState(() {
+                          currentWater = tempWater;
+                        });
+                        Navigator.pop(context);
+                      },
+                    ),
+                  ],
+                ),
               ),
-            ),
-          );
-        });
+            );
+          },
+        );
       },
     );
   }
@@ -239,8 +295,8 @@ class _NutritionScreenState extends State<NutritionScreen> with SingleTickerProv
         const SizedBox(width: 10),
         Expanded(
             child: Text(title,
-                style:
-                const TextStyle(fontWeight: FontWeight.w600, fontSize: 14))),
+                style: const TextStyle(
+                    fontWeight: FontWeight.w600, fontSize: 14))),
         Text(value,
             style: const TextStyle(
                 fontWeight: FontWeight.w600,
