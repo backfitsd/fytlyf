@@ -1,4 +1,3 @@
-//Changes done
 import 'dart:async';
 import 'dart:math';
 import 'package:flutter/material.dart';
@@ -6,7 +5,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:iconsax/iconsax.dart';
 import 'package:lottie/lottie.dart';
-import 'widgets/bottom_nav_bar.dart';
+import 'widgets/bottom_nav_bar.dart'; // Ensure this file exists or remove this import if not needed
 import 'package:flutter/cupertino.dart';
 
 class DashboardScreen extends StatefulWidget {
@@ -45,6 +44,36 @@ class _DashboardScreenState extends State<DashboardScreen>
     "Progress, not perfection, every day.",
     "Stay consistent, results will follow.",
   ];
+
+  // ---------- DISCOVER DATA ----------
+  final List<Map<String, dynamic>> discoverItems = [
+    {
+      "icon": "🔥",
+      "title": "Workout Tips",
+      "desc": "Improve your strength & form"
+    },
+    {
+      "icon": "🍳",
+      "title": "Healthy Recipes",
+      "desc": "Nutritious meals for your goals"
+    },
+    {
+      "icon": "⚡",
+      "title": "Challenges",
+      "desc": "Push yourself every week"
+    },
+    {
+      "icon": "🧘",
+      "title": "Mindfulness",
+      "desc": "Enhance focus & clarity"
+    },
+    {
+      "icon": "⭐",
+      "title": "Daily Habits",
+      "desc": "Small steps, big results"
+    },
+  ];
+  // -----------------------------------
 
   @override
   void initState() {
@@ -85,8 +114,10 @@ class _DashboardScreenState extends State<DashboardScreen>
     try {
       final user = FirebaseAuth.instance.currentUser;
       if (user != null) {
-        final doc =
-        await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
+        final doc = await FirebaseFirestore.instance
+            .collection('users')
+            .doc(user.uid)
+            .get();
         if (doc.exists) {
           setState(() {
             _userData = doc.data();
@@ -129,7 +160,6 @@ class _DashboardScreenState extends State<DashboardScreen>
 
   Widget _buildBigCard(int index, double cardHeight, double cardWidth) {
     return LayoutBuilder(builder: (context, constraints) {
-      double adaptiveFont = constraints.maxWidth * 0.036;
       double adaptiveTitle = constraints.maxWidth * 0.05;
 
       return Container(
@@ -211,6 +241,63 @@ class _DashboardScreenState extends State<DashboardScreen>
     );
   }
 
+  // ---------- Discover card builder ----------
+  Widget _buildDiscoverCard(
+      double width, double height, String icon, String title, String desc) {
+    final double scale = 0.7;
+    final double cardW =
+        (width * 0.96) * 0.6; // narrower card for good horizontal fit
+    final double cardH = height * 0.20 * scale;
+
+    return Container(
+      width: cardW,
+      margin: EdgeInsets.only(right: width * 0.04),
+      padding: EdgeInsets.all(width * 0.04),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(width * 0.05),
+        border: Border.all(color: Colors.grey.withOpacity(0.25), width: 1),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.06),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          )
+        ],
+      ),
+      child: SizedBox(
+        height: cardH,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(
+              icon,
+              style: TextStyle(fontSize: width * 0.08),
+            ),
+            SizedBox(height: height * 0.005),
+            Text(
+              title,
+              style: TextStyle(
+                  fontSize: width * 0.045,
+                  fontWeight: FontWeight.w800,
+                  color: Colors.black87),
+            ),
+            SizedBox(height: height * 0.005),
+            Text(
+              desc,
+              style: TextStyle(
+                  fontSize: width * 0.032,
+                  fontWeight: FontWeight.w500,
+                  color: Colors.black54),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+  // -------------------------------------------
+
   void _showNutritionPopup(BuildContext context) {
     _showStyledPopup(
       context,
@@ -220,7 +307,8 @@ class _DashboardScreenState extends State<DashboardScreen>
       color: Colors.orangeAccent,
       value: "1250/2500 g",
       metrics: [
-        _metric(Icons.emoji_events_outlined, "Protein", "65/120g", Colors.blueAccent),
+        _metric(Icons.emoji_events_outlined, "Protein", "65/120g",
+            Colors.blueAccent),
         _metric(Icons.star_border_rounded, "Carbs", "180/250g", Colors.green),
         _metric(Icons.circle_outlined, "Fat", "45/70g", Colors.orangeAccent),
       ],
@@ -250,18 +338,20 @@ class _DashboardScreenState extends State<DashboardScreen>
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-                  Text(title,
-                      style: const TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.w800,
-                          color: Colors.black87)),
-                  Text(subtitle,
-                      style: const TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w500,
-                          color: Colors.black54)),
-                ]),
+                Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(title,
+                          style: const TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.w800,
+                              color: Colors.black87)),
+                      Text(subtitle,
+                          style: const TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w500,
+                              color: Colors.black54)),
+                    ]),
                 const SizedBox(height: 20),
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -308,41 +398,11 @@ class _DashboardScreenState extends State<DashboardScreen>
   void _showWaterPopup(BuildContext context) {
     double tempWater = currentWater;
     int selectedAmount = 250;
-    final int maxAmount = 500;
-    final int step = 10;
+    const int maxAmount = 500;
+    const int step = 10;
+
     final scrollController =
     FixedExtentScrollController(initialItem: selectedAmount ~/ step);
-
-    void _showCupertinoConfirm(String action, VoidCallback onConfirm) {
-      showCupertinoModalPopup(
-        context: context,
-        builder: (BuildContext context) => CupertinoActionSheet(
-          title: Text("Confirm $action",
-              style: const TextStyle(fontWeight: FontWeight.w700)),
-          message: Text(
-            "Are you sure you want to $action ${selectedAmount} ml of water?",
-            style: const TextStyle(fontSize: 15, color: Colors.black87),
-          ),
-          actions: [
-            CupertinoActionSheetAction(
-              onPressed: onConfirm,
-              isDefaultAction: true,
-              child: Text("Yes, $action",
-                  style: const TextStyle(
-                      color: Colors.blueAccent,
-                      fontWeight: FontWeight.w600,
-                      fontSize: 16)),
-            ),
-          ],
-          cancelButton: CupertinoActionSheetAction(
-            onPressed: () => Navigator.pop(context),
-            isDestructiveAction: true,
-            child: const Text("Cancel",
-                style: TextStyle(color: Colors.redAccent, fontSize: 15)),
-          ),
-        ),
-      );
-    }
 
     showDialog(
       context: context,
@@ -350,128 +410,214 @@ class _DashboardScreenState extends State<DashboardScreen>
         final size = MediaQuery.of(context).size;
         final width = size.width;
         final height = size.height;
-        final double adaptiveIconSize = width * 0.055;
 
-        return StatefulBuilder(builder: (context, setState) {
-          double progress = (tempWater / goalWater).clamp(0.0, 1.0);
+        final wheelItemExtent = height * 0.03;
+        final wheelVisibleHeight = wheelItemExtent * 3;
 
-          return Dialog(
-            insetPadding: EdgeInsets.symmetric(horizontal: width * 0.08),
-            backgroundColor: Colors.white,
-            shape:
-            RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-            child: Padding(
-              padding: EdgeInsets.all(width * 0.05),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Row(
+        return StatefulBuilder(
+          builder: (context, dialogSetState) {
+            double progress = (tempWater / goalWater).clamp(0.0, 1.0);
+
+            return Dialog(
+              insetPadding: EdgeInsets.symmetric(horizontal: width * 0.08),
+              backgroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Padding(
+                padding: EdgeInsets.all(width * 0.05),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text("Hydration",
-                            style: TextStyle(
-                                fontSize: width * 0.05,
-                                fontWeight: FontWeight.w800,
-                                color: Colors.black87)),
-                        Text("Today, Nov 10",
-                            style: TextStyle(
-                                fontSize: width * 0.035,
-                                fontWeight: FontWeight.w500,
-                                color: Colors.black54)),
-                      ]),
-                  SizedBox(height: height * 0.02),
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      Expanded(
+                        Text(
+                          "Hydration",
+                          style: TextStyle(
+                            fontSize: width * 0.05,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                        Text(
+                          "Today, Nov 10",
+                          style: TextStyle(
+                            fontSize: width * 0.035,
+                            fontWeight: FontWeight.w500,
+                            color: Colors.black54,
+                          ),
+                        ),
+                      ],
+                    ),
+
+                    SizedBox(height: height * 0.02),
+
+                    Row(
+                      children: [
+                        /// LEFT SIDE – CIRCLE PROGRESS
+                        Expanded(
                           flex: 5,
-                          child: Column(children: [
-                            Stack(alignment: Alignment.center, children: [
-                              SizedBox(
-                                height: width * 0.35,
-                                width: width * 0.35,
-                                child: CircularProgressIndicator(
-                                  value: progress,
-                                  strokeWidth: 9,
-                                  backgroundColor:
-                                  Colors.blueAccent.withOpacity(0.15),
-                                  valueColor: const AlwaysStoppedAnimation(
-                                      Colors.blueAccent),
-                                ),
-                              ),
-                              Icon(Icons.water_drop_rounded,
-                                  size: adaptiveIconSize * 1.1,
-                                  color: Colors.blueAccent),
-                            ]),
-                            SizedBox(height: height * 0.015),
-                            Text(
-                              "${tempWater.toStringAsFixed(1)}L / ${goalWater.toStringAsFixed(1)}L",
-                              style: TextStyle(
-                                  fontSize: width * 0.037,
-                                  fontWeight: FontWeight.w700),
-                            ),
-                          ])),
-                      Expanded(
-                          flex: 5,
-                          child: Column(children: [
-                            Text("Select water (ml)",
-                                style: TextStyle(
-                                    fontSize: width * 0.035,
-                                    fontWeight: FontWeight.w600,
-                                    color: Colors.black87)),
-                            SizedBox(height: height * 0.01),
-                            SizedBox(
-                              height: height * 0.12,
-                              child: ListWheelScrollView.useDelegate(
-                                controller: scrollController,
-                                itemExtent: height * 0.03,
-                                physics: const FixedExtentScrollPhysics(),
-                                overAndUnderCenterOpacity: 0.5,
-                                onSelectedItemChanged: (index) {
-                                  setState(() {
-                                    selectedAmount = index * step;
-                                  });
-                                },
-                                childDelegate: ListWheelChildBuilderDelegate(
-                                  childCount: (maxAmount ~/ step) + 1,
-                                  builder: (context, index) {
-                                    int value = index * step;
-                                    bool isSelected = value == selectedAmount;
-                                    return AnimatedDefaultTextStyle(
-                                      duration:
-                                      const Duration(milliseconds: 150),
-                                      style: TextStyle(
-                                        fontSize: isSelected
-                                            ? width * 0.045
-                                            : width * 0.038,
-                                        fontWeight: isSelected
-                                            ? FontWeight.w800
-                                            : FontWeight.w500,
-                                        color: isSelected
-                                            ? Colors.blueAccent
-                                            : Colors.black38,
+                          child: Column(
+                            children: [
+                              Stack(
+                                alignment: Alignment.center,
+                                children: [
+                                  SizedBox(
+                                    height: width * 0.35,
+                                    width: width * 0.35,
+                                    child: CircularProgressIndicator(
+                                      value: progress,
+                                      strokeWidth: 9,
+                                      backgroundColor:
+                                      Colors.blueAccent.withOpacity(0.15),
+                                      valueColor: const AlwaysStoppedAnimation(
+                                        Colors.blueAccent,
                                       ),
-                                      child: Text("$value ml"),
-                                    );
-                                  },
+                                    ),
+                                  ),
+                                  Icon(
+                                    Icons.water_drop_rounded,
+                                    size: width * 0.06,
+                                    color: Colors.blueAccent,
+                                  ),
+                                ],
+                              ),
+                              SizedBox(height: height * 0.015),
+                              Text(
+                                "${tempWater.toStringAsFixed(1)}L / ${goalWater.toStringAsFixed(1)}L",
+                                style: TextStyle(
+                                  fontSize: width * 0.037,
+                                  fontWeight: FontWeight.w700,
                                 ),
                               ),
-                            ),
-                          ])),
-                    ],
-                  ),
-                  SizedBox(height: height * 0.025),
-                  _exploreButton(context, onTap: () {
-                    setState(() {
-                      currentWater = tempWater;
-                    });
-                    Navigator.pop(context);
-                  }),
-                ],
+                            ],
+                          ),
+                        ),
+
+                        /// RIGHT SIDE – WHEEL + BUTTONS
+                        Expanded(
+                          flex: 5,
+                          child: Column(
+                            children: [
+                              Text(
+                                "Select water (ml)",
+                                style: TextStyle(
+                                  fontSize: width * 0.035,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.black87,
+                                ),
+                              ),
+
+                              SizedBox(height: height * 0.01),
+
+                              /// Wheel (3 visible items)
+                              SizedBox(
+                                height: wheelVisibleHeight,
+                                child: ListWheelScrollView.useDelegate(
+                                  controller: scrollController,
+                                  itemExtent: wheelItemExtent,
+                                  physics: const FixedExtentScrollPhysics(),
+                                  overAndUnderCenterOpacity: 0.5,
+                                  onSelectedItemChanged: (index) {
+                                    dialogSetState(() {
+                                      selectedAmount = index * step;
+                                    });
+                                  },
+                                  childDelegate: ListWheelChildBuilderDelegate(
+                                    childCount: (maxAmount ~/ step) + 1,
+                                    builder: (context, index) {
+                                      int value = index * step;
+                                      bool isSelected = value == selectedAmount;
+
+                                      return AnimatedDefaultTextStyle(
+                                        duration:
+                                        const Duration(milliseconds: 150),
+                                        style: TextStyle(
+                                          fontSize: isSelected
+                                              ? width * 0.045
+                                              : width * 0.038,
+                                          fontWeight: isSelected
+                                              ? FontWeight.w800
+                                              : FontWeight.w500,
+                                          color: isSelected
+                                              ? Colors.blueAccent
+                                              : Colors.black38,
+                                        ),
+                                        child: Text("$value ml"),
+                                      );
+                                    },
+                                  ),
+                                ),
+                              ),
+
+                              SizedBox(height: height * 0.015),
+
+                              /// - and + buttons (Option B)
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  InkWell(
+                                    onTap: () {
+                                      dialogSetState(() {
+                                        tempWater -= selectedAmount / 1000;
+                                        if (tempWater < 0) tempWater = 0;
+                                        setState(() {
+                                          currentWater = double.parse(
+                                              tempWater.toStringAsFixed(1));
+                                        });
+                                      });
+                                    },
+                                    child: const Icon(
+                                      Icons.remove_circle_outline,
+                                      size: 30,
+                                      color: Colors.blueAccent,
+                                    ),
+                                  ),
+                                  SizedBox(width: width * 0.06),
+                                  InkWell(
+                                    onTap: () {
+                                      dialogSetState(() {
+                                        tempWater += selectedAmount / 1000;
+                                        if (tempWater > goalWater) {
+                                          tempWater = goalWater;
+                                        }
+                                        setState(() {
+                                          currentWater = double.parse(
+                                              tempWater.toStringAsFixed(1));
+                                        });
+                                      });
+                                    },
+                                    child: const Icon(
+                                      Icons.add_circle_outline,
+                                      size: 30,
+                                      color: Colors.blueAccent,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+
+                    SizedBox(height: height * 0.02),
+
+                    _exploreButton(
+                      context,
+                      onTap: () {
+                        setState(() {
+                          currentWater = tempWater;
+                        });
+                        Navigator.pop(context);
+                      },
+                    ),
+                  ],
+                ),
               ),
-            ),
-          );
-        });
+            );
+          },
+        );
       },
     );
   }
@@ -496,8 +642,8 @@ class _DashboardScreenState extends State<DashboardScreen>
         const SizedBox(width: 10),
         Expanded(
             child: Text(title,
-                style:
-                const TextStyle(fontWeight: FontWeight.w600, fontSize: 14))),
+                style: const TextStyle(
+                    fontWeight: FontWeight.w600, fontSize: 14))),
         Text(value,
             style: const TextStyle(
                 fontWeight: FontWeight.w600,
@@ -567,221 +713,280 @@ class _DashboardScreenState extends State<DashboardScreen>
     return Scaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
-        child: Column(children: [
-          // HEADER
-          Container(
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius:
-              BorderRadius.vertical(bottom: Radius.circular(width * 0.06)),
-              boxShadow: [
-                BoxShadow(
-                    color: Colors.black.withOpacity(0.07),
-                    blurRadius: 18,
-                    offset: const Offset(0, 6)),
-              ],
-            ),
-            padding:
-            EdgeInsets.symmetric(horizontal: width * 0.025, vertical: 14),
-            child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Column(
+        child: SingleChildScrollView(
+          child: Column(
+            children: [
+              // HEADER
+              Container(
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.vertical(
+                      bottom: Radius.circular(width * 0.06)),
+                  boxShadow: [
+                    BoxShadow(
+                        color: Colors.black.withOpacity(0.07),
+                        blurRadius: 18,
+                        offset: const Offset(0, 6)),
+                  ],
+                ),
+                padding: EdgeInsets.symmetric(
+                    horizontal: width * 0.025, vertical: 14),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Padding(
-                            padding: EdgeInsets.only(left: greetingLeftSpace),
-                            child: Text(greeting,
-                                style: TextStyle(
-                                    fontSize: width * 0.035,
-                                    fontWeight: FontWeight.w600))),
+                          padding: EdgeInsets.only(left: greetingLeftSpace),
+                          child: Text(greeting,
+                              style: TextStyle(
+                                  fontSize: width * 0.035,
+                                  fontWeight: FontWeight.w600)),
+                        ),
                         Padding(
-                            padding: EdgeInsets.only(
-                                left: usernameLeftSpace, top: 2),
-                            child: ShaderMask(
-                                shaderCallback: (bounds) =>
-                                    const LinearGradient(colors: [
-                                      Color(0xFFFF3D00),
-                                      Color(0xFFFFA726)
-                                    ]).createShader(bounds),
-                                blendMode: BlendMode.srcIn,
-                                child: Text(userName,
-                                    style: TextStyle(
-                                        fontSize: width * 0.05,
-                                        fontWeight: FontWeight.w800)))),
-                      ]),
-                  Row(children: [
-                    Icon(Icons.local_fire_department_rounded,
-                        color: Colors.orange, size: width * 0.085),
-                    SizedBox(width: width * 0.035),
-                    Icon(Iconsax.notification,
-                        color: Colors.black87, size: width * 0.07),
-                    SizedBox(width: width * 0.025),
-                    Icon(Iconsax.profile_circle,
-                        color: Colors.black87, size: width * 0.085),
-                  ])
-                ]),
-          ),
+                          padding:
+                          EdgeInsets.only(left: usernameLeftSpace, top: 2),
+                          child: ShaderMask(
+                            shaderCallback: (bounds) => const LinearGradient(
+                                colors: [
+                                  Color(0xFFFF3D00),
+                                  Color(0xFFFFA726)
+                                ]).createShader(bounds),
+                            blendMode: BlendMode.srcIn,
+                            child: Text(
+                              userName,
+                              style: TextStyle(
+                                  fontSize: width * 0.05,
+                                  fontWeight: FontWeight.w800),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    Row(
+                      children: [
+                        Icon(Icons.local_fire_department_rounded,
+                            color: Colors.orange, size: width * 0.085),
+                        SizedBox(width: width * 0.035),
+                        Icon(Iconsax.notification,
+                            color: Colors.black87, size: width * 0.07),
+                        SizedBox(width: width * 0.025),
+                        Icon(Iconsax.profile_circle,
+                            color: Colors.black87, size: width * 0.085),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
 
-          // MOTIVATIONAL CARD
-          Padding(
-              padding: EdgeInsets.only(top: height * 0.015, bottom: height * 0.012),
-              child: Container(
+              // MOTIVATIONAL CARD
+              Padding(
+                padding: EdgeInsets.only(
+                    top: height * 0.015, bottom: height * 0.012),
+                child: Container(
                   margin: EdgeInsets.symmetric(horizontal: width * 0.02),
                   width: width * 0.96 * 0.95,
                   padding: EdgeInsets.symmetric(
-                      vertical: height * 0.018 * 0.7,
-                      horizontal: width * 0.04),
+                      vertical: height * 0.018 * 0.7, horizontal: width * 0.04),
                   decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(width * 0.05),
-                      border: Border.all(
-                          color: Colors.grey.withOpacity(0.3), width: 1.2),
-                      boxShadow: [
-                        BoxShadow(
-                            color: Colors.black.withOpacity(0.08),
-                            blurRadius: 12,
-                            offset: const Offset(0, 5))
-                      ]),
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(width * 0.05),
+                    border: Border.all(
+                        color: Colors.grey.withOpacity(0.3), width: 1.2),
+                    boxShadow: [
+                      BoxShadow(
+                          color: Colors.black.withOpacity(0.08),
+                          blurRadius: 12,
+                          offset: const Offset(0, 5))
+                    ],
+                  ),
                   child: Center(
-                      child: Text(motivationalLine,
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                              fontSize: width * 0.04 * 0.7,
-                              fontWeight: FontWeight.w700,
-                              color: Colors.black87))))),
-
-          // BIG CARD CAROUSEL
-          SizedBox(
-            height: cardHeight,
-            child: PageView.builder(
-              controller: _pageController,
-              onPageChanged: (index) => setState(() => _currentPage = index),
-              itemBuilder: (context, index) {
-                final realIndex = index % totalCards;
-                return _buildBigCard(realIndex, cardHeight, width);
-              },
-            ),
-          ),
-
-          // SMALL CARDS (unchanged)
-          Padding(
-              padding: EdgeInsets.only(
-                  left: width * 0.03, right: width * 0.03, top: height * 0.01),
-              child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: List.generate(3, (index) {
-                    IconData iconData;
-                    String title;
-                    String value;
-                    Color iconColor;
-                    double targetValue;
-                    VoidCallback? onTap;
-
-                    switch (index) {
-                      case 0:
-                        iconData = Icons.local_fire_department_rounded;
-                        title = "Calories";
-                        value = "1,250 kcal";
-                        iconColor = Colors.orangeAccent;
-                        targetValue = 0.65;
-                        onTap = () => _showNutritionPopup(context);
-                        break;
-                      case 1:
-                        iconData = Icons.water_drop_rounded;
-                        title = "Water";
-                        value = "${currentWater.toStringAsFixed(1)} L";
-                        iconColor = Colors.blueAccent;
-                        targetValue = (currentWater / goalWater).clamp(0, 1);
-                        onTap = () => _showWaterPopup(context);
-                        break;
-                      default:
-                        iconData = Icons.auto_graph_rounded;
-                        title = "Progress";
-                        value = "72%";
-                        iconColor = Colors.green;
-                        targetValue = 0.72;
-                    }
-
-                    return Padding(
-                        padding: EdgeInsets.only(
-                            right: index < 2 ? width * 0.022 : 0),
-                        child: GestureDetector(
-                            onTap: onTap,
-                            child: Container(
-                                width: equalCardWidth,
-                                height: smallCardHeight,
-                                decoration: BoxDecoration(
-                                    color: Colors.white,
-                                    borderRadius:
-                                    BorderRadius.circular(width * 0.05),
-                                    border: Border.all(
-                                        color: Colors.grey.withOpacity(0.3),
-                                        width: 1.2),
-                                    boxShadow: [
-                                      BoxShadow(
-                                          color: Colors.black.withOpacity(0.08),
-                                          blurRadius: 12,
-                                          offset: const Offset(0, 5))
-                                    ]),
-                                child: Column(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      AnimatedBuilder(
-                                          animation: _animationController,
-                                          builder: (context, _) {
-                                            double animatedValue =
-                                                _animationController.value *
-                                                    targetValue;
-                                            return Stack(
-                                                alignment: Alignment.center,
-                                                children: [
-                                                  SizedBox(
-                                                      height: smallCardHeight *
-                                                          0.45 *
-                                                          0.8,
-                                                      width: smallCardHeight *
-                                                          0.45 *
-                                                          0.8,
-                                                      child:
-                                                      CircularProgressIndicator(
-                                                          value:
-                                                          animatedValue,
-                                                          strokeWidth: 5,
-                                                          backgroundColor:
-                                                          iconColor
-                                                              .withOpacity(
-                                                              0.15),
-                                                          valueColor:
-                                                          AlwaysStoppedAnimation(
-                                                              iconColor))),
-                                                  Icon(iconData,
-                                                      size: smallIconSize,
-                                                      color: iconColor
-                                                          .withOpacity(0.9))
-                                                ]);
-                                          }),
-                                      SizedBox(height: height * 0.008),
-                                      Text(title,
-                                          style: TextStyle(
-                                              fontSize: width * 0.03,
-                                              fontWeight: FontWeight.w600)),
-                                      Text(value,
-                                          style: TextStyle(
-                                              fontSize: width * 0.033,
-                                              fontWeight: FontWeight.w700,
-                                              color: iconColor))
-                                    ]))));
-                  }))),
-
-          Expanded(
-              child: Center(
-                  child: Text("Dashboard Basee Screen",
+                    child: Text(
+                      motivationalLine,
+                      textAlign: TextAlign.center,
                       style: TextStyle(
-                          fontSize: width * 0.035,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.black54))))
-        ]),
+                          fontSize: width * 0.04 * 0.7,
+                          fontWeight: FontWeight.w700,
+                          color: Colors.black87),
+                    ),
+                  ),
+                ),
+              ),
+
+              // BIG CARD CAROUSEL
+              SizedBox(
+                height: cardHeight,
+                child: PageView.builder(
+                  controller: _pageController,
+                  onPageChanged: (index) =>
+                      setState(() => _currentPage = index),
+                  itemBuilder: (context, index) {
+                    final realIndex = index % totalCards;
+                    return _buildBigCard(realIndex, cardHeight, width);
+                  },
+                ),
+              ),
+
+              // SMALL CARDS
+              Padding(
+                padding: EdgeInsets.only(
+                    left: width * 0.03,
+                    right: width * 0.03,
+                    top: height * 0.01),
+                child: Column(
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: List.generate(3, (index) {
+                        IconData iconData;
+                        String title;
+                        String value;
+                        Color iconColor;
+                        double targetValue;
+                        VoidCallback? onTap;
+
+                        switch (index) {
+                          case 0:
+                            iconData = Icons.local_fire_department_rounded;
+                            title = "Calories";
+                            value = "1,250 kcal";
+                            iconColor = Colors.orangeAccent;
+                            targetValue = 0.65;
+                            onTap = () => _showNutritionPopup(context);
+                            break;
+                          case 1:
+                            iconData = Icons.water_drop_rounded;
+                            title = "Water";
+                            value = "${currentWater.toStringAsFixed(1)} L";
+                            iconColor = Colors.blueAccent;
+                            targetValue =
+                                (currentWater / goalWater).clamp(0, 1);
+                            onTap = () => _showWaterPopup(context);
+                            break;
+                          default:
+                            iconData = Icons.auto_graph_rounded;
+                            title = "Progress";
+                            value = "72%";
+                            iconColor = Colors.green;
+                            targetValue = 0.72;
+                        }
+
+                        return Padding(
+                          padding: EdgeInsets.only(
+                              right: index < 2 ? width * 0.022 : 0),
+                          child: GestureDetector(
+                            onTap: onTap,
+                            // ---------------- FIXED AREA STARTS HERE ----------------
+                            child: Container(
+                              width: equalCardWidth,
+                              height: smallCardHeight,
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius:
+                                BorderRadius.circular(width * 0.05),
+                                border: Border.all(
+                                    color: Colors.grey.withOpacity(0.15),
+                                    width: 1),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withOpacity(0.05),
+                                    blurRadius: 10,
+                                    offset: const Offset(0, 4),
+                                  )
+                                ],
+                              ),
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Stack(
+                                    alignment: Alignment.center,
+                                    children: [
+                                      SizedBox(
+                                        height: smallIconSize * 1.6,
+                                        width: smallIconSize * 1.6,
+                                        child: CircularProgressIndicator(
+                                          value: targetValue,
+                                          backgroundColor:
+                                          iconColor.withOpacity(0.15),
+                                          valueColor:
+                                          AlwaysStoppedAnimation(iconColor),
+                                          strokeWidth: 5,
+                                        ),
+                                      ),
+                                      Icon(iconData,
+                                          size: smallIconSize,
+                                          color: iconColor),
+                                    ],
+                                  ),
+                                  const Spacer(),
+                                  Text(title,
+                                      style: TextStyle(
+                                          fontSize: width * 0.032,
+                                          fontWeight: FontWeight.w600,
+                                          color: Colors.black54)),
+                                  const SizedBox(height: 2),
+                                  Text(value,
+                                      style: TextStyle(
+                                          fontSize: width * 0.035,
+                                          fontWeight: FontWeight.w800,
+                                          color: Colors.black87)),
+                                  const SizedBox(height: 6),
+                                ],
+                              ),
+                            ),
+                          ),
+                        );
+                      }),
+                    ),
+                  ],
+                ),
+              ),
+              // ---------------- FIXED AREA ENDS HERE ----------------
+
+              SizedBox(height: height * 0.02),
+
+              // DISCOVER SECTION (Was missing but variables existed)
+              Padding(
+                padding: EdgeInsets.symmetric(horizontal: width * 0.05),
+                child: Row(
+                  children: [
+                    Text("Discover",
+                        style: TextStyle(
+                            fontSize: width * 0.05,
+                            fontWeight: FontWeight.w800,
+                            color: Colors.black87)),
+                    const Spacer(),
+                    Text("See All",
+                        style: TextStyle(
+                            fontSize: width * 0.035,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.orange)),
+                  ],
+                ),
+              ),
+              SizedBox(height: height * 0.015),
+
+              // Discover Horizontal List
+              SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                padding: EdgeInsets.only(left: width * 0.05),
+                child: Row(
+                  children: discoverItems.map((item) {
+                    return _buildDiscoverCard(
+                      width,
+                      height,
+                      item["icon"],
+                      item["title"],
+                      item["desc"],
+                    );
+                  }).toList(),
+                ),
+              ),
+              SizedBox(height: height * 0.05), // Bottom padding
+            ],
+          ),
+        ),
       ),
     );
   }
