@@ -4,6 +4,9 @@ import 'package:flutter/material.dart';
 import 'package:iconsax/iconsax.dart';
 import 'package:flutter/cupertino.dart';
 
+// Import the new meal tracking screen (same folder)
+import 'meal_tracking_screen.dart';
+
 class NutritionScreen extends StatefulWidget {
   const NutritionScreen({super.key});
 
@@ -47,7 +50,7 @@ class _NutritionScreenState extends State<NutritionScreen> with SingleTickerProv
     super.dispose();
   }
 
-  // ---------- Water popup (adapted & layout-fixed) ----------
+  // ---------- Water popup (same as before) ----------
   void _showWaterPopup(BuildContext context) {
     double tempWater = currentWater;
     int selectedAmount = 250;
@@ -715,6 +718,37 @@ class _NutritionScreenState extends State<NutritionScreen> with SingleTickerProv
                   );
                 }
 
+                // First card will act as Meal Planner trigger — show a plus label/icon
+                Widget mealPlannerCard() {
+                  return GestureDetector(
+                    onTap: () {
+                      // Navigate to the dedicated Meal Tracking screen you requested
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => const MealTrackingScreen()),
+                      );
+                    },
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(14),
+                        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 8, offset: const Offset(0, 4))],
+                      ),
+                      padding: const EdgeInsets.all(12),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Icon(Icons.restaurant_menu_outlined, size: 28, color: Colors.black54),
+                          const SizedBox(height: 8),
+                          const Text('Meal Planner', style: TextStyle(fontWeight: FontWeight.w700)),
+                          const SizedBox(height: 6),
+                          const Text('Tap to open meal tracking', style: TextStyle(fontSize: 12, color: Colors.black45)),
+                        ],
+                      ),
+                    ),
+                  );
+                }
+
                 return Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -734,7 +768,8 @@ class _NutritionScreenState extends State<NutritionScreen> with SingleTickerProv
                       spacing: hSpacing,
                       runSpacing: 12,
                       children: [
-                        SizedBox(width: cardWidth, height: cardHeight, child: emptyCard()),
+                        // top-left tappable meal planner
+                        SizedBox(width: cardWidth, height: cardHeight, child: mealPlannerCard()),
                         SizedBox(width: cardWidth, height: cardHeight, child: emptyCard()),
                         SizedBox(width: cardWidth, height: cardHeight, child: emptyCard()),
                         SizedBox(width: cardWidth, height: cardHeight, child: emptyCard()),

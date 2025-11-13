@@ -70,7 +70,6 @@ dev_dependencies:
   hive_generator: ^2.0.1
   model_viewer_plus: 1.9.3
 
-
 flutter:
   uses-material-design: true
 
