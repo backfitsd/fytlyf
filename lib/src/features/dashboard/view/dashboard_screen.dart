@@ -957,11 +957,6 @@ class _DashboardScreenState extends State<DashboardScreen>
                             fontWeight: FontWeight.w800,
                             color: Colors.black87)),
                     const Spacer(),
-                    Text("See All",
-                        style: TextStyle(
-                            fontSize: width * 0.035,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.orange)),
                   ],
                 ),
               ),
