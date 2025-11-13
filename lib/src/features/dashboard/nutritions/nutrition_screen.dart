@@ -693,7 +693,7 @@ class _NutritionScreenState extends State<NutritionScreen> with SingleTickerProv
                     const Padding(
                       padding: EdgeInsets.only(left: 4.0, bottom: 8.0),
                       child: Text(
-                        'Meal Tracking',
+                        'Meal Discover',
                         style: TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.w700,
