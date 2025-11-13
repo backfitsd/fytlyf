@@ -421,7 +421,7 @@ class _NutritionScreenState extends State<NutritionScreen> with SingleTickerProv
             children: [
               // image: fixed height computed above so it never overflows
               ClipRRect(
-                borderRadius: BorderRadius.circular(8),
+                borderRadius: BorderRadius.circular(20),
                 child: SizedBox(
                   width: double.infinity,
                   height: imageHeight,
@@ -759,7 +759,11 @@ class _NutritionScreenState extends State<NutritionScreen> with SingleTickerProv
                         child: GradientBorderButton(
                           gradient: _appGradient,
                           onPressed: () {
-                            // TODO: implement add meal
+                            // Navigate to MealTrackingScreen when Add Meal is pressed
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(builder: (_) => const MealTrackingScreen()),
+                            );
                           },
                           icon: const Icon(Icons.add, size: 18, color: Colors.black87),
                           label: const Text('Add Meal', style: TextStyle(fontWeight: FontWeight.w600, color: Colors.black87)),
@@ -802,7 +806,7 @@ class _NutritionScreenState extends State<NutritionScreen> with SingleTickerProv
                     const Padding(
                       padding: EdgeInsets.only(left: 4.0, bottom: 8.0),
                       child: Text(
-                        'Meal Tracking',
+                        'Meal Discover',
                         style: TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.w700,
