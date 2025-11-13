@@ -695,6 +695,56 @@ class _NutritionScreenState extends State<NutritionScreen> with SingleTickerProv
               ),
 
               const SizedBox(height: 18),
+
+              // ---------- NEW: Meal Tracking (empty boxes only) ----------
+              LayoutBuilder(builder: (context, layoutConstraints) {
+                final double availableWidth = layoutConstraints.maxWidth;
+                const double hSpacing = 12.0;
+                final double cardWidth = (availableWidth - hSpacing) / 2;
+                // proportional height — tweak multiplier if you want taller/shorter boxes
+                final double cardHeight = (cardWidth * 0.45).clamp(100.0, 150.0);
+
+                Widget emptyCard() {
+                  return Container(
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(14),
+                      boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 8, offset: const Offset(0, 4))],
+                      border: Border.all(color: Colors.transparent),
+                    ),
+                  );
+                }
+
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.only(left: 4.0, bottom: 8.0),
+                      child: Text(
+                        'Meal Tracking',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w700,
+                          color: Colors.black87,
+                        ),
+                      ),
+                    ),
+
+                    Wrap(
+                      spacing: hSpacing,
+                      runSpacing: 12,
+                      children: [
+                        SizedBox(width: cardWidth, height: cardHeight, child: emptyCard()),
+                        SizedBox(width: cardWidth, height: cardHeight, child: emptyCard()),
+                        SizedBox(width: cardWidth, height: cardHeight, child: emptyCard()),
+                        SizedBox(width: cardWidth, height: cardHeight, child: emptyCard()),
+                      ],
+                    ),
+
+                    const SizedBox(height: 18),
+                  ],
+                );
+              }),
             ],
           ),
         ),
@@ -851,5 +901,116 @@ class _SolidRingPainter extends CustomPainter {
         oldDelegate.ringWidth != ringWidth ||
         oldDelegate.ringColor != ringColor ||
         oldDelegate.baseColor != baseColor;
+  }
+}
+
+/// -------------------- Meal card widget --------------------
+class _MealCard extends StatelessWidget {
+  final String title;
+  final int kcal;
+  final Color progressColor;
+  final String protein;
+  final String carbs;
+  final String fat;
+  final String time;
+  final IconData leadingIcon;
+  final bool showAddCircle;
+  final VoidCallback? onTap;
+
+  const _MealCard({
+    Key? key,
+    required this.title,
+    required this.kcal,
+    required this.progressColor,
+    required this.protein,
+    required this.carbs,
+    required this.fat,
+    required this.time,
+    required this.leadingIcon,
+    this.showAddCircle = false,
+    this.onTap,
+  }) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    // Visual style similar to the provided image (compact, rounded)
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(14),
+          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 8, offset: const Offset(0, 4))],
+        ),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+        child: Row(
+          children: [
+            // image / icon circle
+            CircleAvatar(
+              radius: 26,
+              backgroundColor: Colors.grey.shade100,
+              child: Icon(leadingIcon, size: 26, color: Colors.black87),
+            ),
+            const SizedBox(width: 12),
+            // details
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(title, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15)),
+                  const SizedBox(height: 6),
+                  Text('$kcal kcal', style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 13)),
+                  const SizedBox(height: 6),
+                  // small progress indicator bar
+                  LayoutBuilder(builder: (context, constraints) {
+                    final double barWidth = constraints.maxWidth;
+                    final double used = (kcal / 800).clamp(0.06, 1.0); // arbitrary visual ratio
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Container(
+                          width: barWidth,
+                          height: 6,
+                          decoration: BoxDecoration(
+                            color: Colors.grey.shade200,
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: FractionallySizedBox(
+                            widthFactor: used,
+                            alignment: Alignment.centerLeft,
+                            child: Container(
+                              decoration: BoxDecoration(
+                                color: progressColor,
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        Row(
+                          children: [
+                            Expanded(child: Text('$protein $carbs $fat', style: const TextStyle(fontSize: 11, color: Colors.black54))),
+                            Text(time, style: const TextStyle(fontSize: 11, color: Colors.black54)),
+                          ],
+                        ),
+                      ],
+                    );
+                  }),
+                ],
+              ),
+            ),
+            if (showAddCircle)
+              Padding(
+                padding: const EdgeInsets.only(left: 8.0),
+                child: CircleAvatar(
+                  radius: 16,
+                  backgroundColor: Colors.white,
+                  child: Icon(Icons.add, size: 18, color: Colors.blueAccent),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
   }
 }
