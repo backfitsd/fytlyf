@@ -328,38 +328,149 @@ class _NutritionScreenState extends State<NutritionScreen> with SingleTickerProv
     );
   }
 
+  /// Updated _featureCard — changes annotated with // CHANGED
   Widget _featureCard({
     required double width,
     required double height,
-    required IconData icon,
-    required String title,
-    required String subtitle,
+    IconData? icon,            // optional
+    String? title,             // optional
+    String? subtitle,          // optional
     required VoidCallback onTap,
+    String? imagePath,         // local asset path or network url
+    bool isNetwork = false,
   }) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: width,
-        height: height,
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(14),
-          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 8, offset: const Offset(0, 4))],
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Icon(icon, size: 28, color: Colors.black54),
-            const SizedBox(height: 8),
-            Text(title, style: const TextStyle(fontWeight: FontWeight.w700)),
-            const SizedBox(height: 6),
-            Text(subtitle, style: const TextStyle(fontSize: 12, color: Colors.black45)),
-          ],
+    // container paddings used below must match the padding in the returned widget
+    const double outerPadding = 0; // CHANGED: reduced from 10.0 to give image more room
+    const double innerSpacing = 8.0;
+
+    final bool hasText = (title?.isNotEmpty ?? false) || (subtitle?.isNotEmpty ?? false);
+
+    // Reserve exact vertical space for top image and the text area so total never exceeds card height.
+    // Text area uses a conservative fixed minimum and will grow if title/subtitle present.
+    final double reservedTextArea = hasText ? 48.0 : 0.0; // safe room for 1 line title + optional subtitle
+
+    // imageHeight computed from card height minus paddings & reserved text area.
+    // CHANGED: subtract innerSpacing only when text exists to avoid extra gap for image-only cards
+    final double imageHeight = (height - (outerPadding * 2) - (hasText ? innerSpacing : 0.0) - reservedTextArea)
+        .clamp(44.0, height);
+
+    final IconData usedIcon = icon ?? Icons.image;
+
+    Widget imageWidget;
+    if (imagePath != null) {
+      if (isNetwork) {
+        imageWidget = Image.network(
+          imagePath,
+          fit: BoxFit.cover, // ensure image covers the box
+          width: double.infinity,
+          height: imageHeight,
+          alignment: Alignment.center,
+          loadingBuilder: (ctx, child, progress) {
+            if (progress == null) return child;
+            return SizedBox(
+              height: imageHeight,
+              child: const Center(child: CircularProgressIndicator(strokeWidth: 2)),
+            );
+          },
+          errorBuilder: (ctx, err, st) => Container(
+            width: double.infinity,
+            height: imageHeight,
+            color: Colors.grey.shade100,
+            child: Center(child: Icon(usedIcon, size: 28, color: Colors.black26)),
+          ),
+        );
+      } else {
+        imageWidget = Image.asset(
+          imagePath,
+          fit: BoxFit.cover, // ensure image covers the box
+          width: double.infinity,
+          height: imageHeight,
+          errorBuilder: (ctx, err, st) => Container(
+            width: double.infinity,
+            height: imageHeight,
+            color: Colors.grey.shade100,
+            child: Center(child: Icon(usedIcon, size: 28, color: Colors.black26)),
+          ),
+        );
+      }
+    } else {
+      imageWidget = Container(
+        width: double.infinity,
+        height: imageHeight,
+        color: Colors.grey.shade100,
+        child: Center(child: Icon(usedIcon, size: 28, color: Colors.black54)),
+      );
+    }
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(14),
+        child: Container(
+          width: width,
+          height: height,
+          padding: const EdgeInsets.all(outerPadding),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(14),
+            boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 8, offset: const Offset(0, 4))],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // image: fixed height computed above so it never overflows
+              ClipRRect(
+                borderRadius: BorderRadius.circular(8),
+                child: SizedBox(
+                  width: double.infinity,
+                  height: imageHeight,
+                  child: imageWidget,
+                ),
+              ),
+
+              // CHANGED: Remove extra gap for image-only cards so image fully covers top area
+              if (hasText)
+                SizedBox(height: innerSpacing / 1.2)
+              else
+                const SizedBox(height: 0),
+
+              // optional text area: will occupy reservedTextArea (keeps layout predictable)
+              if (hasText)
+                SizedBox(
+                  height: reservedTextArea,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      if (title != null && title.isNotEmpty)
+                        Text(
+                          title,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(fontWeight: FontWeight.w700),
+                        ),
+                      if (subtitle != null && subtitle.isNotEmpty)
+                        Flexible(
+                          child: Text(
+                            subtitle,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(fontSize: 12, color: Colors.black45),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+            ],
+          ),
         ),
       ),
     );
   }
+
+
+
+
 
   @override
   Widget build(BuildContext context) {
@@ -519,9 +630,7 @@ class _NutritionScreenState extends State<NutritionScreen> with SingleTickerProv
                       ),
                     ),
                   ),
-
                   const SizedBox(width: 8),
-
                   Expanded(
                     flex: 6,
                     child: Card(
@@ -680,12 +789,12 @@ class _NutritionScreenState extends State<NutritionScreen> with SingleTickerProv
 
               const SizedBox(height: 18),
 
-              // ---------- Meal Tracking: 4 tappable feature cards ----------
+              // ---------- Meal Tracking: 4 tappable feature cards (with images) ----------
               LayoutBuilder(builder: (context, layoutConstraints) {
                 final double availableWidth = layoutConstraints.maxWidth;
                 const double hSpacing = 12.0;
                 final double cardWidth = (availableWidth - hSpacing) / 2;
-                final double cardHeight = (cardWidth * 0.55).clamp(100.0, 160.0);
+                final double cardHeight = (cardWidth * 0.75).clamp(110.0, 180.0);
 
                 return Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -693,7 +802,7 @@ class _NutritionScreenState extends State<NutritionScreen> with SingleTickerProv
                     const Padding(
                       padding: EdgeInsets.only(left: 4.0, bottom: 8.0),
                       child: Text(
-                        'Meal Discover',
+                        'Meal Tracking',
                         style: TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.w700,
@@ -710,39 +819,31 @@ class _NutritionScreenState extends State<NutritionScreen> with SingleTickerProv
                         _featureCard(
                           width: cardWidth,
                           height: cardHeight,
-                          icon: Icons.restaurant_menu_outlined,
-                          title: 'Meal Planner',
-                          subtitle: 'Track Breakfast/Lunch/Snack/Dinner',
+                          imagePath: 'assets/images/meal_planner.png',
                           onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const MealTrackingScreen())),
                         ),
 
-                        // 2. Recommend for you (top-right) -> recommend_screen.dart
+                        // 2. Recommend for you (top-right)
                         _featureCard(
                           width: cardWidth,
                           height: cardHeight,
-                          icon: Icons.thumb_up_alt_outlined,
-                          title: 'Recommend for you',
-                          subtitle: 'Personalized meal suggestions',
+                          imagePath: 'assets/images/recommend.png',
                           onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const RecommendScreen())),
                         ),
 
-                        // 3. Recipes (bottom-left) -> recipe_screen.dart
+                        // 3. Recipes (bottom-left)
                         _featureCard(
                           width: cardWidth,
                           height: cardHeight,
-                          icon: Icons.book_outlined,
-                          title: 'Recipes',
-                          subtitle: 'Browse healthy recipes',
+                          imagePath: 'assets/images/recipe.png',
                           onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const RecipeScreen())),
                         ),
 
-                        // 4. AI Meal Planner (bottom-right) -> ai_meal_planner_screen.dart
+                        // 4. AI Meal Planner (bottom-right)
                         _featureCard(
                           width: cardWidth,
                           height: cardHeight,
-                          icon: Icons.smart_toy_outlined,
-                          title: 'AI Meal Planner',
-                          subtitle: 'Auto-generate weekly plans',
+                          imagePath: 'assets/images/ai_planner.png',
                           onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AiMealPlannerScreen())),
                         ),
                       ],

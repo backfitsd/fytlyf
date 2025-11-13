@@ -80,3 +80,7 @@ flutter:
     - assets/images/female.png
     - assets/images/logo.png
     - assets/animations/jumping_jack.json
+    - assets/images/meal_planner.png
+    - assets/images/recommend.png
+    - assets/images/recipe.png
+    - assets/images/ai_planner.png
