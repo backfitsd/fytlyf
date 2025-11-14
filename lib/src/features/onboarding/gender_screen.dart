@@ -33,8 +33,15 @@ class _GenderScreenState extends ConsumerState<GenderScreen> {
     return Scaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
+        top: false,
         child: Padding(
-          padding: EdgeInsets.symmetric(horizontal: isTablet ? 32 : 16),
+          // ✅ Reduced TOP padding above header
+          padding: EdgeInsets.fromLTRB(
+            isTablet ? 32 : 16,
+            6, // << reduced from default to make header closer to top
+            isTablet ? 32 : 16,
+            0,
+          ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
@@ -50,7 +57,6 @@ class _GenderScreenState extends ConsumerState<GenderScreen> {
                 },
                 progress: 0.125,
               ),
-
 
               const SizedBox(height: 25),
               Text(
@@ -130,34 +136,45 @@ class _GenderScreenState extends ConsumerState<GenderScreen> {
           ),
         ),
       ),
+
+      // ✅ Updated NEXT button with extra space below it
       bottomNavigationBar: SafeArea(
         child: Padding(
           padding: const EdgeInsets.fromLTRB(16, 8, 16, 14),
-          child: SizedBox(
-            height: 56,
-            child: ElevatedButton(
-              onPressed: selectedGender == null
-                  ? null
-                  : () {
-                notifier.update({'gender': selectedGender});
-                context.push('/onboarding/goal');
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor:
-                selectedGender == null ? Colors.grey : const Color(0xFFFF3D00),
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(20)),
-                elevation: 0,
-              ),
-              child: Text(
-                "NEXT",
-                style: GoogleFonts.roboto(
-                  fontSize: _responsiveFont(context, 20),
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              SizedBox(
+                height: 56,
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: selectedGender == null
+                      ? null
+                      : () {
+                    notifier.update({'gender': selectedGender});
+                    context.push('/onboarding/goal');
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: selectedGender == null
+                        ? Colors.grey
+                        : const Color(0xFFFF3D00),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(20)),
+                    elevation: 0,
+                  ),
+                  child: Text(
+                    "NEXT",
+                    style: GoogleFonts.roboto(
+                      fontSize: _responsiveFont(context, 20),
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
                 ),
               ),
-            ),
+
+              const SizedBox(height: 20), // ✅ Added spacing below NEXT
+            ],
           ),
         ),
       ),

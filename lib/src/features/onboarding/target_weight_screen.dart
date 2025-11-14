@@ -94,6 +94,7 @@ class _TargetWeightScreenState extends ConsumerState<TargetWeightScreen>
     return Scaffold(
       backgroundColor: bg,
       body: SafeArea(
+        top: false,
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 20),
           child: Column(

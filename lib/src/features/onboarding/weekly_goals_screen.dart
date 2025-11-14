@@ -45,6 +45,7 @@ class _WeeklyGoalsScreenState extends ConsumerState<WeeklyGoalsScreen> {
     return Scaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
+        top: false,
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16),
           child: Column(

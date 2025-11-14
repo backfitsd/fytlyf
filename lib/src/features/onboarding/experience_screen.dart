@@ -37,6 +37,7 @@ class _ExperienceScreenState extends ConsumerState<ExperienceScreen> {
     return Scaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
+        top: false,
         child: Padding(
           padding: EdgeInsets.symmetric(horizontal: isTablet ? 24 : 16),
           child: Column(

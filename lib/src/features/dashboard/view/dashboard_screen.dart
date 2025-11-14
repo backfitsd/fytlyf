@@ -722,6 +722,7 @@ class _DashboardScreenState extends State<DashboardScreen>
     return Scaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
+        top: false,
         child: SingleChildScrollView(
           child: Column(
             children: [
@@ -738,8 +739,11 @@ class _DashboardScreenState extends State<DashboardScreen>
                         offset: const Offset(0, 6)),
                   ],
                 ),
-                padding: EdgeInsets.symmetric(
-                    horizontal: width * 0.025, vertical: 14),
+                padding: EdgeInsets.only(
+                    left: width * 0.025,
+                    right: width * 0.025,
+                    top: 40,
+                    bottom: 10),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [

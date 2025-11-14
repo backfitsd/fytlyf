@@ -53,6 +53,7 @@ class _AgeScreenState extends ConsumerState<AgeScreen> {
     return Scaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
+        top: false,
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 20),
           child: Column(

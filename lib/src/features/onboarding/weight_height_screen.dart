@@ -136,6 +136,7 @@ class _WeightHeightScreenState extends ConsumerState<WeightHeightScreen> {
     return Scaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
+        top: false,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [

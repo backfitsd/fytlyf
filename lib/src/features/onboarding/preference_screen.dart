@@ -37,6 +37,7 @@ class _PreferenceScreenState extends ConsumerState<PreferenceScreen> {
     return Scaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
+        top: false,
         child: Padding(
           padding: EdgeInsets.symmetric(horizontal: isTablet ? 24 : 16),
           child: Column(

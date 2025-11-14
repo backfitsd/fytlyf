@@ -42,7 +42,11 @@ class BottomNavBar extends StatelessWidget {
       child: ClipRRect(
         borderRadius: const BorderRadius.vertical(top: Radius.circular(26)),
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+          padding: const EdgeInsets.only(
+              left: 15,
+              right: 15,
+              top: 7,
+              bottom: 20),
           child: SafeArea(
             top: false,
             child: Row(

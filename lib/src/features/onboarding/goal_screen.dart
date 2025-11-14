@@ -37,6 +37,7 @@ class _GoalScreenState extends ConsumerState<GoalScreen> {
     return Scaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
+        top: false,
         child: Padding(
           padding: EdgeInsets.symmetric(horizontal: isTablet ? 24 : 16),
           child: Column(
@@ -129,6 +130,7 @@ class _GoalScreenState extends ConsumerState<GoalScreen> {
               ),
             ),
           ),
+
         ),
       ),
     );
