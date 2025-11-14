@@ -5,10 +5,10 @@ import 'package:iconsax/iconsax.dart';
 import 'package:flutter/cupertino.dart';
 
 // import other screens from same folder
-import 'meal_tracking_screen.dart';
-import 'recommend_screen.dart';
-import 'recipe_screen.dart';
-import 'ai_meal_planner_screen.dart';
+import 'Meal Discover/Meal Planner/meal_tracking_screen.dart';
+import 'Meal Discover/Recommend/recommend_screen.dart';
+import 'Meal Discover/Recipe/recipe_screen.dart';
+import 'Meal Discover/AI Meal/ai_meal_planner_screen.dart';
 // ADDED: import water screen (relative path from 'nutritions' folder to 'nutrition' folder)
 import 'water_screen.dart';
 
