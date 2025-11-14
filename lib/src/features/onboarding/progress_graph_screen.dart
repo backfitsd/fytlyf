@@ -48,13 +48,14 @@ class _ProgressGraphScreenState extends ConsumerState<ProgressGraphScreen>
     return Scaffold(
       backgroundColor: const Color(0xFFFDFDFD),
       body: SafeArea(
+        top: false,
         child: SingleChildScrollView(
           physics: const BouncingScrollPhysics(),
           padding: EdgeInsets.symmetric(horizontal: 20 * scale, vertical: 20 * scale),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              SizedBox(height: 8 * scale),
+              SizedBox(height: 40 * scale),
               Text(
                 "Your Plan Is Ready 🎯",
                 textAlign: TextAlign.center,

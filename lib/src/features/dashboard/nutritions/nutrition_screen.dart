@@ -33,6 +33,8 @@ class _NutritionScreenState extends State<NutritionScreen> with SingleTickerProv
   double currentWater = 1.2; // example starting liters
   final double goalWater = 2.5;
 
+
+
   @override
   void initState() {
     super.initState();

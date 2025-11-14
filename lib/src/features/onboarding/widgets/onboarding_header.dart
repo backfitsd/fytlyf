@@ -6,11 +6,15 @@ class OnboardingHeader extends StatelessWidget {
   final VoidCallback onSkip;
   final double progress; // 0.0–1.0 progress indicator
 
+  // 👇 NEW: You can control top padding manually
+  final double topPadding;
+
   const OnboardingHeader({
     super.key,
     required this.onBack,
     required this.onSkip,
     required this.progress,
+    this.topPadding = 40, // 👈 default same as before (no padding)
   });
 
   @override
@@ -19,73 +23,77 @@ class OnboardingHeader extends StatelessWidget {
     final width = MediaQuery.of(context).size.width;
 
     return SafeArea(
-      child: Container(
-        width: width,
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Container(
-              width: 54,
-              height: 54,
-              decoration: BoxDecoration(
-                color: baseGrey,
-                shape: BoxShape.circle,
+      top: false,
+      child: Padding(
+        padding: EdgeInsets.only(top: topPadding), // 👈 manual control
+        child: Container(
+          width: width,
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 0),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Container(
+                width: 54,
+                height: 54,
+                decoration: BoxDecoration(
+                  color: baseGrey,
+                  shape: BoxShape.circle,
+                ),
+                child: IconButton(
+                  icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.black),
+                  iconSize: 20,
+                  splashRadius: 28,
+                  padding: EdgeInsets.zero,
+                  onPressed: onBack,
+                ),
               ),
-              child: IconButton(
-                icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.black),
-                iconSize: 20,
-                splashRadius: 28,
-                padding: EdgeInsets.zero,
-                onPressed: onBack,
-              ),
-            ),
-            SizedBox(
-              width: 54,
-              height: 54,
-              child: Stack(
-                alignment: Alignment.center,
-                children: [
-                  Positioned.fill(
-                    child: TweenAnimationBuilder<double>(
-                      tween: Tween<double>(begin: 0, end: progress),
-                      duration: const Duration(milliseconds: 600),
-                      curve: Curves.easeOutCubic,
-                      builder: (context, value, _) => CircularProgressIndicator(
-                        strokeWidth: 6,
-                        value: value,
-                        backgroundColor: baseGrey,
-                        valueColor: const AlwaysStoppedAnimation<Color>(Colors.red),
+              SizedBox(
+                width: 54,
+                height: 54,
+                child: Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    Positioned.fill(
+                      child: TweenAnimationBuilder<double>(
+                        tween: Tween<double>(begin: 0, end: progress),
+                        duration: const Duration(milliseconds: 600),
+                        curve: Curves.easeOutCubic,
+                        builder: (context, value, _) => CircularProgressIndicator(
+                          strokeWidth: 6,
+                          value: value,
+                          backgroundColor: baseGrey,
+                          valueColor: const AlwaysStoppedAnimation<Color>(Colors.red),
+                        ),
                       ),
                     ),
-                  ),
-                  ClipOval(
-                    child: Container(
-                      width: 54,
-                      height: 54,
-                      color: baseGrey,
-                      child: TextButton(
-                        onPressed: onSkip,
-                        style: TextButton.styleFrom(
-                          padding: EdgeInsets.zero,
-                          minimumSize: const Size(54, 54),
-                          shape: const CircleBorder(),
-                        ),
-                        child: Text(
-                          "Skip",
-                          style: GoogleFonts.roboto(
-                            fontSize: 12,
-                            color: Colors.black,
-                            fontWeight: FontWeight.bold,
+                    ClipOval(
+                      child: Container(
+                        width: 54,
+                        height: 54,
+                        color: baseGrey,
+                        child: TextButton(
+                          onPressed: onSkip,
+                          style: TextButton.styleFrom(
+                            padding: EdgeInsets.zero,
+                            minimumSize: const Size(54, 54),
+                            shape: const CircleBorder(),
+                          ),
+                          child: Text(
+                            "Skip",
+                            style: GoogleFonts.roboto(
+                              fontSize: 12,
+                              color: Colors.black,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
                         ),
                       ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
