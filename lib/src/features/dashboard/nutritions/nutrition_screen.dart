@@ -5,10 +5,12 @@ import 'package:iconsax/iconsax.dart';
 import 'package:flutter/cupertino.dart';
 
 // import other screens from same folder
-import 'meal_tracking_screen.dart';
-import 'recommend_screen.dart';
-import 'recipe_screen.dart';
-import 'ai_meal_planner_screen.dart';
+import 'Meal Discover/Meal Planner/meal_tracking_screen.dart';
+import 'Meal Discover/Recommend/recommend_screen.dart';
+import 'Meal Discover/Recipe/recipe_screen.dart';
+import 'Meal Discover/AI Meal/ai_meal_planner_screen.dart';
+// ADDED: import water screen (relative path from 'nutritions' folder to 'nutrition' folder)
+import 'water_screen.dart';
 
 class NutritionScreen extends StatefulWidget {
   const NutritionScreen({super.key});
@@ -249,10 +251,15 @@ class _NutritionScreenState extends State<NutritionScreen> with SingleTickerProv
                     _exploreButton(
                       context,
                       onTap: () {
+                        // Save temporary water, close dialog, then navigate to WaterScreen
                         setState(() {
                           currentWater = tempWater;
                         });
                         Navigator.pop(context);
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (_) => const WaterScreen()),
+                        );
                       },
                     ),
                   ],
@@ -472,10 +479,6 @@ class _NutritionScreenState extends State<NutritionScreen> with SingleTickerProv
     );
   }
 
-
-
-
-
   @override
   Widget build(BuildContext context) {
     final size = MediaQuery.of(context).size;
@@ -594,6 +597,13 @@ class _NutritionScreenState extends State<NutritionScreen> with SingleTickerProv
                                           ringColor: calorieColor,
                                           icon: Iconsax.flash,
                                           iconSize: iconSize,
+                                          // CHANGED: make calorie ring tappable
+                                          onTap: () {
+                                            Navigator.push(
+                                              context,
+                                              MaterialPageRoute(builder: (_) => const MealTrackingScreen()),
+                                            );
+                                          },
                                         );
                                       },
                                     ),
@@ -697,6 +707,8 @@ class _NutritionScreenState extends State<NutritionScreen> with SingleTickerProv
                                             ringColor: color,
                                             icon: icon,
                                             iconSize: (ringSize * 0.42).clamp(16.0, ringSize * 0.55).toDouble(),
+                                            // Note: nutrient cells are wrapped with GestureDetector below,
+                                            // so we don't need onTap here unless you want ring-specific tap.
                                           );
                                         },
                                       ),
@@ -718,7 +730,16 @@ class _NutritionScreenState extends State<NutritionScreen> with SingleTickerProv
                                     child: content,
                                   );
                                 } else {
-                                  return content;
+                                  // CHANGED: make nutrient cells tappable and navigate to MealTrackingScreen
+                                  return GestureDetector(
+                                    onTap: () {
+                                      Navigator.push(
+                                        context,
+                                        MaterialPageRoute(builder: (_) => const MealTrackingScreen()),
+                                      );
+                                    },
+                                    child: content,
+                                  );
                                 }
                               }
 
@@ -939,6 +960,7 @@ class _SolidRingWithIcon extends StatelessWidget {
   final double size, ringWidth, progress, iconSize;
   final Color baseColor, ringColor;
   final IconData icon;
+  final VoidCallback? onTap; // CHANGED: optional tap callback
 
   const _SolidRingWithIcon({
     required this.size,
@@ -948,27 +970,37 @@ class _SolidRingWithIcon extends StatelessWidget {
     required this.ringColor,
     required this.icon,
     required this.iconSize,
+    this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      width: size,
-      height: size,
-      child: Stack(
-        alignment: Alignment.center,
-        children: [
-          CustomPaint(
-            size: Size.square(size),
-            painter: _SolidRingPainter(
-              progress: progress,
-              ringWidth: ringWidth,
-              ringColor: ringColor,
-              baseColor: baseColor,
-            ),
+    // Use Material + InkWell to get ripple effect when tapped
+    return Material(
+      color: Colors.transparent,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(size / 2)),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(size / 2),
+        child: SizedBox(
+          width: size,
+          height: size,
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              CustomPaint(
+                size: Size.square(size),
+                painter: _SolidRingPainter(
+                  progress: progress,
+                  ringWidth: ringWidth,
+                  ringColor: ringColor,
+                  baseColor: baseColor,
+                ),
+              ),
+              Icon(icon, size: iconSize, color: Colors.black87),
+            ],
           ),
-          Icon(icon, size: iconSize, color: Colors.black87),
-        ],
+        ),
       ),
     );
   }
@@ -1018,7 +1050,8 @@ class _SolidRingPainter extends CustomPainter {
   }
 }
 
-/// -------------------- Meal card widget (unchanged) --------------------
+/// -------------------- Meal card widget (unchanged except kcal tap) --------------------
+// (unchanged, omitted here for brevity)
 class _MealCard extends StatelessWidget {
   final String title;
   final int kcal;
@@ -1070,7 +1103,16 @@ class _MealCard extends StatelessWidget {
                 children: [
                   Text(title, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15)),
                   const SizedBox(height: 6),
-                  Text('$kcal kcal', style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 13)),
+                  // kcal text tappable (navigates to MealTrackingScreen)
+                  GestureDetector(
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => const MealTrackingScreen()),
+                      );
+                    },
+                    child: Text('$kcal kcal', style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 13)),
+                  ),
                   const SizedBox(height: 6),
                   LayoutBuilder(builder: (context, constraints) {
                     final double barWidth = constraints.maxWidth;
