@@ -9,6 +9,8 @@ import 'meal_tracking_screen.dart';
 import 'recommend_screen.dart';
 import 'recipe_screen.dart';
 import 'ai_meal_planner_screen.dart';
+// ADDED: import water screen (relative path from 'nutritions' folder to 'nutrition' folder)
+import 'water_screen.dart';
 
 class NutritionScreen extends StatefulWidget {
   const NutritionScreen({super.key});
@@ -247,10 +249,15 @@ class _NutritionScreenState extends State<NutritionScreen> with SingleTickerProv
                     _exploreButton(
                       context,
                       onTap: () {
+                        // Save temporary water, close dialog, then navigate to WaterScreen
                         setState(() {
                           currentWater = tempWater;
                         });
                         Navigator.pop(context);
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (_) => const WaterScreen()),
+                        );
                       },
                     ),
                   ],
@@ -1042,6 +1049,7 @@ class _SolidRingPainter extends CustomPainter {
 }
 
 /// -------------------- Meal card widget (unchanged except kcal tap) --------------------
+// (unchanged, omitted here for brevity)
 class _MealCard extends StatelessWidget {
   final String title;
   final int kcal;

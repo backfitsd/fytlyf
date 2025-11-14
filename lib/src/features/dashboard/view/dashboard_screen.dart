@@ -8,6 +8,10 @@ import 'package:lottie/lottie.dart';
 import 'widgets/bottom_nav_bar.dart'; // Ensure this file exists or remove this import if not needed
 import 'package:flutter/cupertino.dart';
 
+// ADDED: import for water screen
+import '../nutritions/water_screen.dart';
+
+
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
 
@@ -606,10 +610,15 @@ class _DashboardScreenState extends State<DashboardScreen>
                     _exploreButton(
                       context,
                       onTap: () {
+                        // Save temp value, close dialog and navigate to WaterScreen
                         setState(() {
                           currentWater = tempWater;
                         });
                         Navigator.pop(context);
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (_) => const WaterScreen()),
+                        );
                       },
                     ),
                   ],
