@@ -3,6 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:iconsax/iconsax.dart';
 import 'dart:math';
 
+// import the search screen (same folder)
+import 'search_meal_screen.dart';
+
 class MealAdderScreen extends StatefulWidget {
   final String mealName;
   const MealAdderScreen({Key? key, required this.mealName}) : super(key: key);
@@ -126,9 +129,7 @@ class _MealAdderScreenState extends State<MealAdderScreen> {
   }
 
   Widget _summaryCard(BuildContext ctx) {
-    // mimic your sketch: big ring left + 3 macro rows right
     final totalKcal = _items.fold<int>(0, (p, e) => p + e.kcal);
-    // For demo only: made-up macro numbers
     final prot = 10;
     final carbs = 70;
     final fat = 10;
@@ -143,7 +144,6 @@ class _MealAdderScreenState extends State<MealAdderScreen> {
       ),
       child: Row(
         children: [
-          // big ring + icon
           SizedBox(
             height: 86,
             width: 86,
@@ -154,7 +154,6 @@ class _MealAdderScreenState extends State<MealAdderScreen> {
                   size: const Size(86,86),
                   painter: _SolidRingPainterMock(progress: min(1.0, totalKcal / 800), ringWidth: 9, ringColor: const Color(0xFFFFA726), baseColor: const Color(0xFFE8F2FF)),
                 ),
-                // replaced missing Iconsax.cut with Flutter's Icons.fastfood
                 Icon(Icons.fastfood, size: 36, color: Colors.black87),
               ],
             ),
@@ -162,7 +161,6 @@ class _MealAdderScreenState extends State<MealAdderScreen> {
 
           const SizedBox(width: 14),
 
-          // right side macro rows
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -233,6 +231,15 @@ class _MealAdderScreenState extends State<MealAdderScreen> {
     );
   }
 
+  // navigate helper to open SearchMealScreen
+  Future<void> _openSearchMealScreen() async {
+    // You can await a result if SearchMealScreen returns a picked item.
+    await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const SearchMealScreen()),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -255,28 +262,37 @@ class _MealAdderScreenState extends State<MealAdderScreen> {
         padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
         child: Column(
           children: [
-            // top summary card (like the sketch)
             _summaryCard(context),
 
             const SizedBox(height: 12),
 
-            // row with "Meal" label and plus circle on right (sketch)
+            // row with "Meal" label and a SEARCH-BAR style tappable area on right
             Row(
               children: [
                 const Text('Meal', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
                 const Spacer(),
-                GestureDetector(
-                  onTap: () => _showAddEditDialog(),
+                // new search-bar-like control replacing the small + circle
+                InkWell(
+                  onTap: _openSearchMealScreen,
+                  borderRadius: BorderRadius.circular(12),
                   child: Container(
                     height: 44,
-                    width: 44,
+                    width: 180, // small rounded search field
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
                     decoration: BoxDecoration(
                       color: Colors.white,
-                      borderRadius: BorderRadius.circular(44),
+                      borderRadius: BorderRadius.circular(12),
                       border: Border.all(color: Colors.grey.shade300),
                       boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 6, offset: const Offset(0,3))],
                     ),
-                    child: const Icon(Icons.add, size: 22),
+                    child: Row(
+                      children: const [
+                        Icon(Icons.search, size: 20, color: Colors.black54),
+                        SizedBox(width: 8),
+                        Expanded(child: Text('+ Meal', style: TextStyle(color: Colors.black54))),
+                        // if you want a plus at the far right you can add it; omitted to match "convert + into search"
+                      ],
+                    ),
                   ),
                 ),
               ],
@@ -284,23 +300,24 @@ class _MealAdderScreenState extends State<MealAdderScreen> {
 
             const SizedBox(height: 10),
 
-            // list of items
             Expanded(
               child: _items.isEmpty
-                  ? Center(child: Text('No items yet. Tap + to add to ${widget.mealName}.', style: TextStyle(color: Colors.black54)))
+                  ? Center(child: Text('No items yet. Tap the search or + to add to ${widget.mealName}.', style: TextStyle(color: Colors.black54)))
                   : ListView.builder(
                 itemCount: _items.length,
                 itemBuilder: (context, i) => _itemTile(i, _items[i]),
               ),
             ),
 
-            // bottom quick-add bar (optional, like sketch's bottom input)
             SafeArea(
               child: Row(
                 children: [
                   Expanded(
                     child: TextButton(
-                      onPressed: () => _showAddEditDialog(),
+                      onPressed: () async {
+                        // open search screen when bottom "Add item" pressed
+                        await _openSearchMealScreen();
+                      },
                       style: TextButton.styleFrom(
                         padding: const EdgeInsets.symmetric(vertical: 14),
                         backgroundColor: Colors.white,
@@ -318,10 +335,8 @@ class _MealAdderScreenState extends State<MealAdderScreen> {
                     ),
                   ),
                   const SizedBox(width: 12),
-                  // Save button (maybe later wire to NutritionModel)
                   ElevatedButton(
                     onPressed: () {
-                      // Return items to previous screen if needed
                       Navigator.pop(context, _items);
                     },
                     style: ElevatedButton.styleFrom(
@@ -340,7 +355,6 @@ class _MealAdderScreenState extends State<MealAdderScreen> {
   }
 }
 
-/// Simple painter for the ring in summary card (small approximation of your ring UI)
 class _SolidRingPainterMock extends CustomPainter {
   final double progress;
   final double ringWidth;
