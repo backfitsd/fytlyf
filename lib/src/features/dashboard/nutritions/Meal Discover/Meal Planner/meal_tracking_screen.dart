@@ -60,7 +60,8 @@ class NutritionModel extends ChangeNotifier {
   }
 }
 
-/// Meal Tracking screen — uses animated gradient rings for calorie + all macros.
+///// Meal Tracking screen /////
+
 class MealTrackingScreen extends StatefulWidget {
   const MealTrackingScreen({Key? key}) : super(key: key);
 
@@ -99,6 +100,14 @@ class _MealTrackingScreenState extends State<MealTrackingScreen> {
   Widget build(BuildContext context) {
     final now = DateTime.now();
     final dateLabel = 'Today, ${_monthName(now.month)} ${now.day}';
+
+    // Use the same app gradient as NutritionScreen's Add Meal button:
+    // Color(0xFFFF3D00) -> Color(0xFFFF6D00) -> Color(0xFFFFA726)
+    const List<Color> _rowBorderGradient = [
+      Color(0xFFFF3D00),
+      Color(0xFFFF6D00),
+      Color(0xFFFFA726),
+    ];
 
     return Scaffold(
       backgroundColor: const Color(0xFFF4F7FB),
@@ -156,7 +165,7 @@ class _MealTrackingScreenState extends State<MealTrackingScreen> {
 
                   const SizedBox(height: 16),
 
-                  // CALORIE CARD — big ring left (center icon updated to Iconsax.flash)
+                  // CALORIE CARD — big ring left (center icon updated to meal icon)
                   Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
@@ -173,36 +182,45 @@ class _MealTrackingScreenState extends State<MealTrackingScreen> {
                     ),
                     child: Row(
                       children: [
-                        // Animated gradient calorie ring (big) — inner icon matches nutrition_screen (Iconsax.flash)
+                        // Animated gradient calorie ring (big) — inner icon resembles fork/spoon/meal
                         SizedBox(
-                          height: 90,
-                          width: 90,
+                          height: 96,
+                          width: 96,
                           child: AnimatedRing(
-                            size: 90,
-                            strokeWidth: 9,
+                            size: 96,
+                            strokeWidth: 7,
                             value: kcalProgress.clamp(0.0, 1.0),
                             gradient: const [
                               Color(0xFFFFA726),
                               Color(0xFFFF8A00),
                               Color(0xFFFF6D00),
                             ],
-                            inner: const Icon(Iconsax.flash, size: 36), // match nutrition_screen
+                            // Use a general Material icon that looks like a meal (fork/spoon)
+                            inner: const Icon(Icons.restaurant, size: 40),
                           ),
                         ),
 
                         const SizedBox(width: 16),
 
+                        // Moved calorie numbers to the upper side and added motivational quote under it.
                         Expanded(
                           child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
+                            crossAxisAlignment: CrossAxisAlignment.center,
                             children: [
+                              // calories moved to the top
                               Text(
                                 '$consumedKcal of $totalKcal Cal',
-                                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+                                style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w800),
                               ),
+                              const SizedBox(height: 6),
+                              // motivational quote under calorie numbers
+                              Text(
+                                'Keep going — every meal matters!',
+                                style: TextStyle(fontSize: 13, fontStyle: FontStyle.italic, color: Colors.grey.shade600),
+                              ),
+                              const SizedBox(height: 6),
+                              // Retain space where the horizontal progress used to be (no change requested)
                               const SizedBox(height: 8),
-                              // horizontal kcal progress painter removed (per your request)
-                              const SizedBox(height: 12),
                             ],
                           ),
                         ),
@@ -212,7 +230,7 @@ class _MealTrackingScreenState extends State<MealTrackingScreen> {
 
                   const SizedBox(height: 18),
 
-                  // MACROS CARD — all rings animated & gradient (icons centered inside each ring)
+                  // MACROS CARD — all rings animated & gradient (labels moved above rings; numbers below)
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
                     decoration: BoxDecoration(
@@ -222,11 +240,13 @@ class _MealTrackingScreenState extends State<MealTrackingScreen> {
                     ),
                     child: Row(
                       children: [
-                        // Protein (center icon: Iconsax.cup)
+                        // Protein (label above, ring, numbers below)
                         Expanded(
                           child: Column(
                             mainAxisSize: MainAxisSize.min,
                             children: [
+                              const Text('Protein', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+                              const SizedBox(height: 6),
                               SizedBox(
                                 height: 60,
                                 width: 60,
@@ -239,18 +259,18 @@ class _MealTrackingScreenState extends State<MealTrackingScreen> {
                                 ),
                               ),
                               const SizedBox(height: 6),
-                              const Text('Protein', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
-                              const SizedBox(height: 2),
                               Text('${model.protCurrent.toInt()}/${model.protTarget.toInt()}g', style: TextStyle(fontSize: 11, color: Colors.grey.shade600)),
                             ],
                           ),
                         ),
 
-                        // Carbs (center icon: Iconsax.ranking)
+                        // Carbs (label above, ring, numbers below)
                         Expanded(
                           child: Column(
                             mainAxisSize: MainAxisSize.min,
                             children: [
+                              const Text('Carbs', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+                              const SizedBox(height: 6),
                               SizedBox(
                                 height: 60,
                                 width: 60,
@@ -263,18 +283,18 @@ class _MealTrackingScreenState extends State<MealTrackingScreen> {
                                 ),
                               ),
                               const SizedBox(height: 6),
-                              const Text('Carbs', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
-                              const SizedBox(height: 2),
                               Text('${model.carbsCurrent.toInt()}/${model.carbsTarget.toInt()}g', style: TextStyle(fontSize: 11, color: Colors.grey.shade600)),
                             ],
                           ),
                         ),
 
-                        // Fat (center icon: Iconsax.coffee)
+                        // Fat (label above, ring, numbers below)
                         Expanded(
                           child: Column(
                             mainAxisSize: MainAxisSize.min,
                             children: [
+                              const Text('Fat', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+                              const SizedBox(height: 6),
                               SizedBox(
                                 height: 60,
                                 width: 60,
@@ -287,18 +307,18 @@ class _MealTrackingScreenState extends State<MealTrackingScreen> {
                                 ),
                               ),
                               const SizedBox(height: 6),
-                              const Text('Fat', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
-                              const SizedBox(height: 2),
                               Text('${model.fatCurrent.toInt()}/${model.fatTarget.toInt()}g', style: TextStyle(fontSize: 11, color: Colors.grey.shade600)),
                             ],
                           ),
                         ),
 
-                        // Water (center icon: Iconsax.glass)
+                        // Water (label above, ring, numbers below)
                         Expanded(
                           child: Column(
                             mainAxisSize: MainAxisSize.min,
                             children: [
+                              const Text('Water', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+                              const SizedBox(height: 6),
                               SizedBox(
                                 height: 60,
                                 width: 60,
@@ -311,8 +331,6 @@ class _MealTrackingScreenState extends State<MealTrackingScreen> {
                                 ),
                               ),
                               const SizedBox(height: 6),
-                              const Text('Water', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
-                              const SizedBox(height: 2),
                               Text('${model.waterCurrent}/${model.waterTarget}L', style: TextStyle(fontSize: 11, color: Colors.grey.shade600)),
                             ],
                           ),
@@ -323,34 +341,50 @@ class _MealTrackingScreenState extends State<MealTrackingScreen> {
 
                   const SizedBox(height: 20),
 
-                  // Meal rows (navigation added)
+                  // Meal rows (navigation added) — now using the NutritionScreen app gradient for borders
                   ...sections.map((section) {
                     final hasTarget = section.target > 0;
                     final text = hasTarget ? '${section.consumed} of ${section.target} Cal' : '${section.consumed} Cal';
                     return Padding(
-                      padding: const EdgeInsets.only(bottom: 12),
+                      padding: const EdgeInsets.only(bottom: 10),
                       child: InkWell(
-                        borderRadius: BorderRadius.circular(14),
+                        borderRadius: BorderRadius.circular(16),
                         onTap: () => _openMealAdder(section.name), // open meal adder on tapping the whole row
                         child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                           decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(14),
-                            border: Border.all(color: Colors.grey.shade300),
+                            // outer gradient for border effect (same as NutritionScreen _appGradient)
+                            gradient: const LinearGradient(
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                              colors: [
+                                Color(0xFFFF3D00),
+                                Color(0xFFFF6D00),
+                                Color(0xFFFFA726),
+                              ],
+                            ),
+                            borderRadius: BorderRadius.circular(16),
                           ),
-                          child: Row(
-                            children: [
-                              Text(section.name, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
-                              const Spacer(),
-                              Text(text, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
-                              const SizedBox(width: 10),
-                              // Make the add icon tappable too
-                              GestureDetector(
-                                onTap: () => _openMealAdder(section.name),
-                                child: CircleAvatar(radius: 14, backgroundColor: Colors.grey.shade200, child: const Icon(Icons.add, size: 18)),
-                              ),
-                            ],
+                          child: Container(
+                            // inner white card (creates the gradient border look)
+                            margin: const EdgeInsets.all(2), // thickness of gradient border
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 19),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(14),
+                            ),
+                            child: Row(
+                              children: [
+                                Text(section.name, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+                                const Spacer(),
+                                Text(text, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
+                                const SizedBox(width: 10),
+                                // Make the add icon tappable too
+                                GestureDetector(
+                                  onTap: () => _openMealAdder(section.name),
+                                  child: CircleAvatar(radius: 14, backgroundColor: Colors.grey.shade200, child: const Icon(Icons.add, size: 18)),
+                                ),
+                              ],
+                            ),
                           ),
                         ),
                       ),
@@ -365,6 +399,8 @@ class _MealTrackingScreenState extends State<MealTrackingScreen> {
     );
   }
 }
+
+///// (rest of file unchanged — painters and animated ring) /////
 
 /// Small painter for thin rectangular progress bar used under calorie text.
 /// (kept in file for compatibility but not used in UI anymore)

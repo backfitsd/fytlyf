@@ -1,4 +1,3 @@
-// file: lib/src/features/dashboard/nutritions/Meal Discover/Meal Planner/meal_adder_screen.dart
 import 'package:flutter/material.dart';
 import 'package:iconsax/iconsax.dart';
 import 'dart:math';
@@ -135,6 +134,7 @@ class _MealAdderScreenState extends State<MealAdderScreen> {
     final fat = 10;
 
     return Container(
+      constraints: BoxConstraints(minHeight: 150),
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: Colors.white,
@@ -143,37 +143,55 @@ class _MealAdderScreenState extends State<MealAdderScreen> {
         boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 8, offset: const Offset(0,4))],
       ),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          SizedBox(
-            height: 86,
+          SizedBox(height: 110,
             width: 86,
-            child: Stack(
-              alignment: Alignment.center,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
               children: [
-                CustomPaint(
-                  size: const Size(86,86),
-                  painter: _SolidRingPainterMock(progress: min(1.0, totalKcal / 800), ringWidth: 9, ringColor: const Color(0xFFFFA726), baseColor: const Color(0xFFE8F2FF)),
+                // ring at top
+                SizedBox(
+                  height: 64,
+                  width: 64,
+                  child: Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      CustomPaint(
+                        size: const Size(64,64),
+                        painter: _SolidRingPainterMock(progress: min(1.0, totalKcal / 800), ringWidth: 7, ringColor: const Color(0xFFFFA726), baseColor: const Color(0xFFE8F2FF)),
+                      ),
+                      // keep a small icon on the ring center but no kcal number inside
+                      Icon(Icons.restaurant, size: 20, color: Colors.black54),
+                    ],
+                  ),
                 ),
-                Icon(Icons.fastfood, size: 36, color: Colors.black87),
+
+                const SizedBox(height: 15),
+
+
+                const Text('kcal', style: TextStyle(fontSize: 11, color: Colors.black54)),
               ],
             ),
           ),
 
-          const SizedBox(width: 14),
+          const SizedBox(width: 20),
 
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.start, // moved slightly upward
               children: [
-                Text('$totalKcal of 675 Cal', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
-                const SizedBox(height: 8),
+
+                const SizedBox(height: 20),
                 Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _macroRow(Iconsax.cup, 'Protein', '$prot/30 g'),
-                    const SizedBox(height: 6),
-                    _macroRow(Iconsax.ranking, 'Carbs', '$carbs/100 g'),
-                    const SizedBox(height: 6),
-                    _macroRow(Iconsax.coffee, 'Fat', '$fat/30 g'),
+                    _macroRow(Iconsax.cup, 'Protein', 10, 30),
+                    const SizedBox(height: 8),
+                    _macroRow(Iconsax.ranking, 'Carbs', 70, 100),
+                    const SizedBox(height: 8),
+                    _macroRow(Iconsax.coffee, 'Fat', 10, 30),
                   ],
                 ),
               ],
@@ -184,8 +202,10 @@ class _MealAdderScreenState extends State<MealAdderScreen> {
     );
   }
 
-  Widget _macroRow(IconData icon, String label, String value) {
+  Widget _macroRow(IconData icon, String label, int current, int goal) {
+    final progress = (goal <= 0) ? 0.0 : (current / goal).clamp(0.0, 1.0);
     return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         Container(
           height: 26,
@@ -197,8 +217,33 @@ class _MealAdderScreenState extends State<MealAdderScreen> {
           child: Icon(icon, size: 16, color: Colors.black87),
         ),
         const SizedBox(width: 10),
-        Expanded(child: Text(label, style: const TextStyle(fontWeight: FontWeight.w600))),
-        Text(value, style: const TextStyle(color: Colors.black54)),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Expanded(child: Text(label, style: const TextStyle(fontWeight: FontWeight.w600))),
+                  Text('$current/$goal g', style: const TextStyle(color: Colors.black54, fontWeight: FontWeight.w700)),
+                ],
+              ),
+              const SizedBox(height: 6),
+              // indicator bar next to each nutrition count
+              SizedBox(
+                height: 6,
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(6),
+                  child: LinearProgressIndicator(
+                    value: progress,
+                    backgroundColor: Colors.grey.shade200,
+                    // do not set explicit colors for the filled part to allow theme to pick; but for clarity we use a fixed color here
+                    valueColor: AlwaysStoppedAnimation(Colors.orange.shade400),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
       ],
     );
   }
@@ -290,7 +335,6 @@ class _MealAdderScreenState extends State<MealAdderScreen> {
                         Icon(Icons.search, size: 20, color: Colors.black54),
                         SizedBox(width: 8),
                         Expanded(child: Text('+ Meal', style: TextStyle(color: Colors.black54))),
-                        // if you want a plus at the far right you can add it; omitted to match "convert + into search"
                       ],
                     ),
                   ),

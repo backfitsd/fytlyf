@@ -1,5 +1,6 @@
 // file: lib/src/features/dashboard/nutritions/Meal Discover/Meal Planner/search_meal_screen.dart
 import 'package:flutter/material.dart';
+import 'meal_info_screen.dart'; // <-- adjust this import if your meal info file is named or located differently
 
 class SearchMealScreen extends StatefulWidget {
   const SearchMealScreen({Key? key}) : super(key: key);
@@ -42,6 +43,19 @@ class _SearchMealScreenState extends State<SearchMealScreen> {
     // If you want to return the selected item to the previous screen:
     Navigator.pop(context, item);
     // Or perform other behaviour like opening an edit dialog to set qty/kcal.
+  }
+
+  void _openMealInfo(String item) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => MealInfoScreen(item: item)),
+    ).then((result) {
+      // result will be the map returned from MealInfoScreen._onAdd (if any)
+      if (result != null) {
+        // handle returned data if needed
+        // e.g. Navigator.pop(context, result);
+      }
+    });
   }
 
   @override
@@ -90,7 +104,7 @@ class _SearchMealScreenState extends State<SearchMealScreen> {
                     borderRadius: BorderRadius.circular(12),
                     child: InkWell(
                       borderRadius: BorderRadius.circular(12),
-                      onTap: () => _onSelect(item),
+                      onTap: () => _onSelect(item), // row tap still returns selection
                       child: Container(
                         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                         child: Row(
@@ -106,7 +120,12 @@ class _SearchMealScreenState extends State<SearchMealScreen> {
                             ),
                             const SizedBox(width: 12),
                             Expanded(child: Text(item, style: const TextStyle(fontWeight: FontWeight.w700))),
-                            const Icon(Icons.chevron_right, color: Colors.black38),
+                            // Replaced chevron with a tappable plus icon
+                            IconButton(
+                              onPressed: () => _openMealInfo(item),
+                              icon: const Icon(Icons.add_circle, color: Colors.deepOrangeAccent),
+                              tooltip: 'Add / View details',
+                            ),
                           ],
                         ),
                       ),
