@@ -247,6 +247,7 @@ class _TargetWeightScreenState extends ConsumerState<TargetWeightScreen>
                   ),
                 ),
               ),
+              const SizedBox(height: 20),
             ],
           ),
         ),

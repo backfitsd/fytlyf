@@ -111,40 +111,48 @@ class _ExperienceScreenState extends ConsumerState<ExperienceScreen> {
           ),
         ),
       ),
+      // ------------------ MATCHED bottomNavigationBar ------------------
       bottomNavigationBar: SafeArea(
         child: Padding(
           padding: const EdgeInsets.fromLTRB(16, 8, 16, 14),
-          child: SizedBox(
-            height: 56,
-            width: double.infinity,
-            child: ElevatedButton(
-              onPressed: selectedExperience == null
-                  ? null
-                  : () {
-                notifier.update({'experience': selectedExperience});
-                Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (_) => const PreferenceScreen(),
+          child: Column(
+            mainAxisSize: MainAxisSize.min, // important: don't expand
+            children: [
+              SizedBox(
+                height: 56,
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: selectedExperience == null
+                      ? null
+                      : () {
+                    notifier.update({'experience': selectedExperience});
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => const PreferenceScreen(),
+                      ),
+                    );
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: selectedExperience == null
+                        ? Colors.grey
+                        : const Color(0xFFFF3D00),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(20),
+                    ),
                   ),
-                );
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: selectedExperience == null
-                    ? Colors.grey
-                    : const Color(0xFFFF3D00),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(20),
+                  child: Text(
+                    "NEXT",
+                    style: GoogleFonts.roboto(
+                      fontSize: _responsiveFont(context, 20),
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
                 ),
               ),
-              child: Text(
-                "NEXT",
-                style: GoogleFonts.roboto(
-                  fontSize: _responsiveFont(context, 20),
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
-                ),
-              ),
-            ),
+              // ← This extra gap below the button matches GoalScreen's spacing
+              const SizedBox(height: 20),
+            ],
           ),
         ),
       ),

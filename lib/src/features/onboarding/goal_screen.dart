@@ -103,7 +103,10 @@ class _GoalScreenState extends ConsumerState<GoalScreen> {
       bottomNavigationBar: SafeArea(
         child: Padding(
           padding: const EdgeInsets.fromLTRB(16, 8, 16, 14),
-          child: SizedBox(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+            SizedBox(
             height: 56,
             width: double.infinity,
             child: ElevatedButton(
@@ -130,11 +133,14 @@ class _GoalScreenState extends ConsumerState<GoalScreen> {
               ),
             ),
           ),
-
+          const SizedBox(height: 20),
+            ],
+          ),
         ),
       ),
     );
   }
+
 
   // --- Smooth Premium Goal Option Card ---
   Widget _buildGoalOption(String goal, Icon icon) {

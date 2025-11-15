@@ -22,8 +22,7 @@ class _WeeklyGoalsScreenState extends ConsumerState<WeeklyGoalsScreen> {
 
   double _responsiveFont(BuildContext context, double base) {
     final size = MediaQuery.of(context).size;
-    final shortest =
-    size.width < size.height ? size.width : size.height;
+    final shortest = size.width < size.height ? size.width : size.height;
     return base * (shortest / 420);
   }
 
@@ -141,8 +140,7 @@ class _WeeklyGoalsScreenState extends ConsumerState<WeeklyGoalsScreen> {
                       transform:
                       Matrix4.translationValues(0, isSelected ? -8.0 : 0.0, 0),
                       decoration: BoxDecoration(
-                        gradient:
-                        isSelected ? premiumGradient : unselectedGradient,
+                        gradient: isSelected ? premiumGradient : unselectedGradient,
                         borderRadius: BorderRadius.circular(16),
                         boxShadow: [
                           if (isSelected)
@@ -195,43 +193,51 @@ class _WeeklyGoalsScreenState extends ConsumerState<WeeklyGoalsScreen> {
         ),
       ),
 
-      // ✅ NEXT button (unchanged)
+      // ------------------ MATCHED bottomNavigationBar ------------------
       bottomNavigationBar: SafeArea(
         child: Padding(
           padding: const EdgeInsets.fromLTRB(16, 8, 16, 14),
-          child: SizedBox(
-            height: 56,
-            child: ElevatedButton(
-              onPressed: selectedDays == null
-                  ? null
-                  : () {
-                notifier.update({'weeklyGoal': selectedDays});
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              SizedBox(
+                height: 56,
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: selectedDays == null
+                      ? null
+                      : () {
+                    notifier.update({'weeklyGoal': selectedDays});
 
-                Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (_) => const CreatingPlanScreen(),
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => const CreatingPlanScreen(),
+                      ),
+                    );
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor:
+                    selectedDays == null ? Colors.grey : const Color(0xFFFF3D00),
+                    elevation: selectedDays == null ? 0 : 4,
+                    shadowColor: Colors.redAccent.withValues(alpha: 0.4),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(20),
+                    ),
                   ),
-                );
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: selectedDays == null
-                    ? Colors.grey
-                    : const Color(0xFFFF3D00),
-                elevation: selectedDays == null ? 0 : 4,
-                shadowColor: Colors.redAccent.withValues(alpha: 0.4),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(20),
+                  child: Text(
+                    'NEXT',
+                    style: GoogleFonts.roboto(
+                      fontSize: _responsiveFont(context, 20),
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
                 ),
               ),
-              child: Text(
-                'NEXT',
-                style: GoogleFonts.roboto(
-                  fontSize: _responsiveFont(context, 20),
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
-                ),
-              ),
-            ),
+
+              // ← This extra gap below the button matches GoalScreen's spacing
+              const SizedBox(height: 20),
+            ],
           ),
         ),
       ),

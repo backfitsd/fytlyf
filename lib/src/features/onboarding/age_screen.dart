@@ -69,8 +69,8 @@ class _AgeScreenState extends ConsumerState<AgeScreen> {
                 onSkip: () {
                   Navigator.of(context).push(
                     MaterialPageRoute(
-                      builder: (_) =>
-                          AuthEntryScreen()
+                        builder: (_) =>
+                            AuthEntryScreen()
                     ),
                   );
                 },
@@ -159,6 +159,10 @@ class _AgeScreenState extends ConsumerState<AgeScreen> {
                   ),
                 ),
               ),
+
+              // ← MATCHED to GoalScreen: add spacer + small gap before bottomNavigationBar
+              const Spacer(),
+              const SizedBox(height: 10),
             ],
           ),
         ),
@@ -167,33 +171,39 @@ class _AgeScreenState extends ConsumerState<AgeScreen> {
       bottomNavigationBar: SafeArea(
         child: Padding(
           padding: const EdgeInsets.fromLTRB(16, 8, 16, 14),
-          child: SizedBox(
-            height: 56,
-            width: double.infinity,
-            child: ElevatedButton(
-              onPressed: () {
-                notifier.update({'age': _selectedAge.toDouble()});
-                Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (_) => const WeightHeightScreen(),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              SizedBox(
+                height: 56,
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () {
+                    notifier.update({'age': _selectedAge.toDouble()});
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => const WeightHeightScreen(),
+                      ),
+                    );
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFFFF3D00),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(20),
+                    ),
                   ),
-                );
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFFFF3D00),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(20),
+                  child: Text(
+                    'NEXT',
+                    style: GoogleFonts.roboto(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: responsiveFont(context, 20),
+                    ),
+                  ),
                 ),
               ),
-              child: Text(
-                'NEXT',
-                style: GoogleFonts.roboto(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                  fontSize: responsiveFont(context, 20),
-                ),
-              ),
-            ),
+              const SizedBox(height: 20),
+            ],
           ),
         ),
       ),

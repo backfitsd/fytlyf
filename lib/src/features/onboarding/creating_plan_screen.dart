@@ -297,7 +297,7 @@ class _CreatingPlanScreenState extends ConsumerState<CreatingPlanScreen>
                       ),
                     ),
                   ),
-                  const SizedBox(height: 40),
+                  const SizedBox(height: 100),
                 ],
               ),
             ),

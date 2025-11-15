@@ -304,6 +304,7 @@ class _WeightHeightScreenState extends ConsumerState<WeightHeightScreen> {
                 ),
               ),
             ),
+            const SizedBox(height: 20),
           ],
         ),
       ),

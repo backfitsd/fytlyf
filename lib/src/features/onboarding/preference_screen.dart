@@ -111,51 +111,63 @@ class _PreferenceScreenState extends ConsumerState<PreferenceScreen> {
           ),
         ),
       ),
+
+      // ---------------------- BOTTOM NAVIGATION ----------------------
       bottomNavigationBar: SafeArea(
         child: Padding(
           padding: const EdgeInsets.fromLTRB(16, 8, 16, 14),
-          child: SizedBox(
-            height: 56,
-            width: double.infinity,
-            child: ElevatedButton(
-              onPressed: selectedPreferences.isEmpty
-                  ? null
-                  : () {
-                final selectedString = selectedPreferences.join(', ');
-                notifier.update({'preference': selectedString});
-                Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (_) => const WeeklyGoalsScreen(),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              SizedBox(
+                height: 56,
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: selectedPreferences.isEmpty
+                      ? null
+                      : () {
+                    final selectedString =
+                    selectedPreferences.join(', ');
+                    notifier.update({'preference': selectedString});
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => const WeeklyGoalsScreen(),
+                      ),
+                    );
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: selectedPreferences.isEmpty
+                        ? Colors.grey
+                        : const Color(0xFFFF3D00),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(20),
+                    ),
                   ),
-                );
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: selectedPreferences.isEmpty
-                    ? Colors.grey
-                    : const Color(0xFFFF3D00),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(20),
+                  child: Text(
+                    "NEXT",
+                    style: GoogleFonts.roboto(
+                      fontSize: _responsiveFont(context, 20),
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
                 ),
               ),
-              child: Text(
-                "NEXT",
-                style: GoogleFonts.roboto(
-                  fontSize: _responsiveFont(context, 20),
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
-                ),
-              ),
-            ),
+
+              // ✅ SAME GAP AS GOAL SCREEN
+              const SizedBox(height: 20),
+            ],
           ),
         ),
       ),
     );
   }
 
+  // ---------------------- OPTION BUILDER ----------------------
   Widget _buildPreferenceOption(String value, Icon icon) {
     final bool isSelected = selectedPreferences.contains(value);
 
-    // ✅ Reverted original gradient colors
+    // Restore original gradients/colors (unchanged)
     const LinearGradient premiumGradient = LinearGradient(
       colors: [
         Color(0xFFFF3D00),
@@ -167,7 +179,7 @@ class _PreferenceScreenState extends ConsumerState<PreferenceScreen> {
     );
 
     final LinearGradient unselectedGradient = LinearGradient(
-      colors: [Colors.grey.shade200, Colors.grey.shade100],
+      colors: [Color(0xFFF1F1F3), Color(0xFFFAFAFB)],
       begin: Alignment.topLeft,
       end: Alignment.bottomRight,
     );
@@ -190,20 +202,21 @@ class _PreferenceScreenState extends ConsumerState<PreferenceScreen> {
           boxShadow: [
             if (isSelected)
               BoxShadow(
-                color: const Color(0xFFFF6D00).withValues(alpha: 0.4),
+                color: const Color(0xFFFF6D00).withOpacity(0.4),
                 blurRadius: 18,
                 spreadRadius: 2,
                 offset: const Offset(0, 10),
               )
             else
               BoxShadow(
-                color: Colors.black.withValues(alpha: 0.06),
+                color: Colors.black.withOpacity(0.06),
                 blurRadius: 6,
                 offset: const Offset(0, 2),
               ),
           ],
           border: Border.all(
-            color: isSelected ? const Color(0xFFFF3D00) : Colors.transparent,
+            color:
+            isSelected ? const Color(0xFFFF3D00) : Colors.transparent,
             width: 2,
           ),
         ),
