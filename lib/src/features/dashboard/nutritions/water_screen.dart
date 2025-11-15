@@ -1,311 +1,459 @@
+// file: lib/src/features/dashboard/nutritions/water_screen.dart
+// PREMIUM HYDRATION SCREEN – APPLE FITNESS STYLE
+// Perfectly matched with your WaterRepository signatures.
+
 import 'dart:math';
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'services/water_repository.dart';
 
 class WaterScreen extends StatefulWidget {
-  final double initialWater;
-  final double goalWater;
-
-  const WaterScreen({
-    Key? key,
-    this.initialWater = 0.0,
-    this.goalWater = 2.5,
-  }) : super(key: key);
+  const WaterScreen({Key? key}) : super(key: key);
 
   @override
   State<WaterScreen> createState() => _WaterScreenState();
 }
 
-class _WaterScreenState extends State<WaterScreen> {
-  late double _currentWater;
-  late final double _goal;
+class _WaterScreenState extends State<WaterScreen> with SingleTickerProviderStateMixin {
+  final FirebaseAuth _auth = FirebaseAuth.instance;
 
-  final List<_WaterLog> _logs = [];
+  late AnimationController _controller;
 
-  static const LinearGradient _appGradient = LinearGradient(
-    colors: [
-      Color(0xFFFF3D00),
-      Color(0xFFFF6D00),
-      Color(0xFFFFA726),
-    ],
-    begin: Alignment.topLeft,
-    end: Alignment.bottomRight,
-  );
+  int totalMl = 0;
+  int goalMl = 2500; // UI goal (adjust if needed)
+  List<int> entries = [];
+
+  bool loading = true;
 
   @override
   void initState() {
     super.initState();
-    _currentWater = widget.initialWater;
-    _goal = widget.goalWater;
 
-    if (_currentWater > 0) {
-      _logs.insert(
-        0,
-        _WaterLog(amount: _currentWater, time: DateTime.now()),
-      );
-    }
-  }
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 900),
+    );
 
-  void _addWater(double liters) {
-    setState(() {
-      _currentWater += liters;
-      if (_currentWater > _goal) _currentWater = _goal;
-
-      _logs.insert(0, _WaterLog(amount: liters, time: DateTime.now()));
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadToday();
     });
   }
 
-  void _openPicker() {
-    double tempWater = 0.25; // liters
+  // yyyy-MM-dd
+  String _dateKey(DateTime dt) {
+    return WaterRepository.dateId(dt);
+  }
+
+  Future<void> _loadToday() async {
+    final uid = _auth.currentUser?.uid;
+    if (uid == null) return;
+
+    final dateId = _dateKey(DateTime.now());
+
+    try {
+      final list = await WaterRepository.getDate(uid, dateId);
+      setState(() {
+        entries = list;
+        totalMl = list.fold(0, (p, e) => p + e);
+        loading = false;
+      });
+      _controller.forward();
+    } catch (e) {
+      debugPrint("Failed loading water: $e");
+      setState(() => loading = false);
+    }
+  }
+
+  // -----------------------------
+  // FIXED ADD → matches repo: (uid, ml)
+  // -----------------------------
+  Future<void> _addEntry(int ml) async {
+    final uid = _auth.currentUser?.uid;
+    if (uid == null) return;
+
+    try {
+      await WaterRepository.addWater(uid, ml);
+      await _loadToday();
+    } catch (e) {
+      debugPrint("add entry failed: $e");
+    }
+  }
+
+  // -----------------------------
+  // FIXED REMOVE → (uid, index, dateId)
+  // -----------------------------
+  Future<void> _deleteEntry(int index) async {
+    final uid = _auth.currentUser?.uid;
+    if (uid == null) return;
+
+    final dateId = _dateKey(DateTime.now());
+
+    try {
+      await WaterRepository.removeWater(uid, index, dateId);
+      await _loadToday();
+    } catch (e) {
+      debugPrint("delete entry failed: $e");
+    }
+  }
+
+  // -----------------------------
+  // FIXED EDIT → (uid, index, newMl, dateId)
+  // -----------------------------
+  Future<void> _editEntry(int index, int newMl) async {
+    final uid = _auth.currentUser?.uid;
+    if (uid == null) return;
+
+    final dateId = _dateKey(DateTime.now());
+
+    try {
+      await WaterRepository.editWater(uid, index, newMl, dateId);
+      await _loadToday();
+    } catch (e) {
+      debugPrint("edit entry failed: $e");
+    }
+  }
+
+  // -----------------------------
+  // Custom Apple-Style Picker
+  // -----------------------------
+  Future<void> _openCustomPicker() async {
     int selected = 250;
-    const int step = 50;
+    const int step = 10;
+    const int max = 1000;
 
     final controller =
     FixedExtentScrollController(initialItem: selected ~/ step);
 
-    showDialog(
+    final result = await showDialog<int>(
       context: context,
-      builder: (context) {
+      builder: (_) {
         final size = MediaQuery.of(context).size;
-        final wheelExtent = size.height * 0.03;
 
-        return StatefulBuilder(builder: (context, setDialog) {
-          return Dialog(
-            backgroundColor: Colors.white,
-            shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16)),
-            child: Padding(
-              padding: const EdgeInsets.all(18),
-              child: Column(
+        return Dialog(
+          shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(24)),
+          backgroundColor: Colors.white,
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: StatefulBuilder(builder: (_, setPop) {
+              return Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Text("Add Water",
-                      style:
-                      TextStyle(fontSize: 20, fontWeight: FontWeight.w800)),
-                  const SizedBox(height: 12),
+                  Text("Add Water",
+                      style: TextStyle(
+                          fontSize: size.width * 0.055,
+                          fontWeight: FontWeight.w800)),
+                  SizedBox(height: size.height * 0.015),
                   SizedBox(
-                    height: wheelExtent * 3,
+                    height: size.height * 0.18,
                     child: ListWheelScrollView.useDelegate(
                       controller: controller,
-                      itemExtent: wheelExtent,
+                      itemExtent: size.height * 0.035,
                       physics: const FixedExtentScrollPhysics(),
                       onSelectedItemChanged: (i) {
-                        setDialog(() {
-                          selected = i * step;
-                          tempWater = selected / 1000.0;
-                        });
+                        setPop(() => selected = i * step);
                       },
                       childDelegate: ListWheelChildBuilderDelegate(
-                        childCount: 30,
-                        builder: (context, i) {
-                          final value = i * step;
-                          final selectedNow = value == selected;
+                        childCount: (max ~/ step) + 1,
+                        builder: (_, i) {
+                          final v = i * step;
                           return AnimatedDefaultTextStyle(
-                            duration: const Duration(milliseconds: 120),
+                            duration: const Duration(milliseconds: 150),
                             style: TextStyle(
-                              fontSize: selectedNow ? 22 : 18,
-                              fontWeight: selectedNow
+                              fontSize: v == selected
+                                  ? size.width * 0.06
+                                  : size.width * 0.045,
+                              fontWeight: v == selected
                                   ? FontWeight.w700
                                   : FontWeight.w500,
-                              color: selectedNow
+                              color: v == selected
                                   ? Colors.blueAccent
                                   : Colors.black45,
                             ),
-                            child: Text("$value ml"),
+                            child: Text("$v ml"),
                           );
                         },
                       ),
                     ),
                   ),
-                  const SizedBox(height: 14),
+                  SizedBox(height: size.height * 0.02),
                   ElevatedButton(
-                    onPressed: () {
-                      Navigator.pop(context);
-                      _addWater(tempWater);
-                    },
-                    child: const Text("Add"),
+                    onPressed: () => Navigator.pop(context, selected),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.blueAccent,
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16)),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 26, vertical: 12),
+                    ),
+                    child: const Text("Add",
+                        style: TextStyle(
+                            fontWeight: FontWeight.w700,
+                            color: Colors.white)),
+                  )
+                ],
+              );
+            }),
+          ),
+        );
+      },
+    );
+
+    if (result != null) {
+      _addEntry(result);
+    }
+  }
+
+  // -----------------------------
+  // Apple Fitness Style Hydration Ring
+  // -----------------------------
+  Widget _buildRing() {
+    final progress = (totalMl / goalMl).clamp(0.0, 1.0);
+
+    final size = MediaQuery.of(context).size.width * 0.55;
+    final ringWidth = size * 0.08;
+
+    return SizedBox(
+      width: size,
+      height: size,
+      child: AnimatedBuilder(
+        animation: _controller,
+        builder: (_, __) {
+          return CustomPaint(
+            painter: _RingPainter(
+              progress: _controller.value * progress,
+              ringWidth: ringWidth,
+              baseColor: Colors.grey.shade200,
+              ringColor: Colors.blueAccent,
+            ),
+            child: Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.water_drop_rounded,
+                      color: Colors.blueAccent,
+                      size: size * 0.22),
+                  Text(
+                    "$totalMl ml",
+                    style: TextStyle(
+                        fontWeight: FontWeight.w800,
+                        fontSize: size * 0.18),
                   ),
+                  Text(
+                    "Goal: $goalMl ml",
+                    style: TextStyle(
+                        color: Colors.black54,
+                        fontSize: size * 0.065),
+                  )
                 ],
               ),
             ),
           );
-        });
-      },
+        },
+      ),
     );
   }
 
-  Color _progressColor(double p) {
-    if (p < 0.33) return Colors.blueAccent;
-    if (p < 0.66) return Colors.lightBlue;
-    return Colors.green;
+  // -----------------------------
+  // Entry Card
+  // -----------------------------
+  Widget _entryCard(int ml, int index) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      margin: const EdgeInsets.only(bottom: 12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 8,
+              offset: const Offset(0, 4))
+        ],
+      ),
+      child: Row(
+        children: [
+          CircleAvatar(
+            radius: 20,
+            backgroundColor: Colors.blueAccent.withOpacity(0.12),
+            child: const Icon(Icons.water_drop, color: Colors.blueAccent),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              "$ml ml",
+              style: const TextStyle(
+                  fontSize: 17, fontWeight: FontWeight.w600),
+            ),
+          ),
+          IconButton(
+            onPressed: () => _deleteEntry(index),
+            icon: const Icon(Icons.delete_outline, color: Colors.red),
+          )
+        ],
+      ),
+    );
   }
 
+  // -----------------------------
+  // UI
+  // -----------------------------
   @override
   Widget build(BuildContext context) {
-    final width = MediaQuery.of(context).size.width;
-    final progress = (_currentWater / _goal).clamp(0.0, 1.0);
-    final ringSize = min(width * 0.58, 240.0);
-
     return Scaffold(
+      backgroundColor: const Color(0xFFF6F7FB),
       appBar: AppBar(
         title: const Text("Hydration"),
-        centerTitle: true,
-        elevation: 0,
         backgroundColor: Colors.white,
-        foregroundColor: Colors.black87,
+        foregroundColor: Colors.black,
+        elevation: 0,
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(16),
+      body: loading
+          ? const Center(child: CircularProgressIndicator())
+          : SingleChildScrollView(
+        padding: const EdgeInsets.all(18),
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(14),
-                boxShadow: [
-                  BoxShadow(
-                      color: Colors.black.withOpacity(0.05),
-                      blurRadius: 8,
-                      offset: const Offset(0, 4))
-                ],
-              ),
-              child: Column(
-                children: [
-                  SizedBox(
-                    height: ringSize,
-                    width: ringSize,
-                    child: Stack(
-                      alignment: Alignment.center,
-                      children: [
-                        CircularProgressIndicator(
-                          value: progress,
-                          strokeWidth: 12,
-                          backgroundColor: Colors.blueAccent.withOpacity(0.15),
-                          valueColor: AlwaysStoppedAnimation(
-                              _progressColor(progress)),
-                        ),
-                        Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(Icons.water_drop_rounded,
-                                size: ringSize * 0.14,
-                                color: Colors.blueAccent),
-                            Text("${_currentWater.toStringAsFixed(2)} L",
-                                style: TextStyle(
-                                    fontSize: ringSize * 0.13,
-                                    fontWeight: FontWeight.w800)),
-                            Text("Goal ${_goal.toStringAsFixed(1)} L",
-                                style: const TextStyle(color: Colors.black54)),
-                          ],
-                        )
-                      ],
-                    ),
-                  ),
-                ],
-              ),
+            _buildRing(),
+            const SizedBox(height: 20),
+
+            const Text(
+              "Hydration",
+              style: TextStyle(
+                  fontSize: 22, fontWeight: FontWeight.w800),
             ),
+            const SizedBox(height: 4),
+            const Text("Keep pushing toward your goal!",
+                style: TextStyle(color: Colors.black54)),
 
-            const SizedBox(height: 18),
+            const SizedBox(height: 20),
 
-            /// Quick add
             Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
-                Expanded(child: _quickAdd("100 ml", 0.1)),
-                const SizedBox(width: 8),
-                Expanded(child: _quickAdd("250 ml", 0.25)),
-                const SizedBox(width: 8),
-                Expanded(child: _quickAdd("500 ml", 0.5)),
+                _quickAdd(100),
+                _quickAdd(250),
+                _quickAdd(500),
               ],
             ),
 
-            const SizedBox(height: 14),
+            const SizedBox(height: 12),
 
-            ElevatedButton.icon(
-              onPressed: _openPicker,
-              icon: const Icon(Icons.add_circle_outline,
-                  color: Colors.blueAccent),
-              label: const Text("Custom Amount"),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.white,
-                foregroundColor: Colors.black87,
-                elevation: 0,
-                side: BorderSide(color: Colors.grey.shade300),
-              ),
+            _customAddButton(),
+
+            const SizedBox(height: 22),
+
+            Align(
+              alignment: Alignment.centerLeft,
+              child: Text("Entries",
+                  style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w700,
+                      color: Colors.black87)),
+            ),
+            const SizedBox(height: 10),
+
+            entries.isEmpty
+                ? const Padding(
+              padding: EdgeInsets.only(top: 40),
+              child: Text("No water added.",
+                  style: TextStyle(
+                      color: Colors.black38, fontSize: 15)),
+            )
+                : Column(
+              children: List.generate(
+                  entries.length,
+                      (i) => _entryCard(entries[i], i)),
             ),
 
-            const SizedBox(height: 14),
-
-            Expanded(
-              child: Container(
-                padding:
-                const EdgeInsets.symmetric(horizontal: 10, vertical: 14),
-                decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(12),
-                    boxShadow: [
-                      BoxShadow(
-                          color: Colors.black.withOpacity(0.03),
-                          blurRadius: 8,
-                          offset: const Offset(0, 4))
-                    ]),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text("Today",
-                        style: TextStyle(
-                            fontSize: 16, fontWeight: FontWeight.w800)),
-                    const SizedBox(height: 8),
-                    Expanded(
-                      child: _logs.isEmpty
-                          ? const Center(
-                          child: Text("No water intake added yet.",
-                              style: TextStyle(color: Colors.black45)))
-                          : ListView.builder(
-                        itemCount: _logs.length,
-                        itemBuilder: (context, i) {
-                          final log = _logs[i];
-                          return ListTile(
-                            leading: CircleAvatar(
-                              backgroundColor:
-                              Colors.blueAccent.withOpacity(0.12),
-                              child: const Icon(Icons.water_drop_rounded,
-                                  color: Colors.blueAccent),
-                            ),
-                            title: Text(
-                                "${log.amount.toStringAsFixed(2)} L"),
-                            subtitle: Text(
-                                "${log.amount * 1000} ml added"),
-                          );
-                        },
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
+            const SizedBox(height: 40),
           ],
         ),
       ),
     );
   }
 
-  Widget _quickAdd(String label, double liters) {
+  // -----------------------------
+  // Quick Add
+  // -----------------------------
+  Widget _quickAdd(int ml) {
     return ElevatedButton(
-      onPressed: () => _addWater(liters),
+      onPressed: () => _addEntry(ml),
       style: ElevatedButton.styleFrom(
         backgroundColor: Colors.white,
         foregroundColor: Colors.black87,
         elevation: 0,
         side: BorderSide(color: Colors.grey.shade300),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 12),
       ),
-      child: Text(label),
+      child: Text("$ml ml",
+          style: const TextStyle(fontWeight: FontWeight.w600)),
+    );
+  }
+
+  Widget _customAddButton() {
+    return ElevatedButton.icon(
+      onPressed: _openCustomPicker,
+      icon: const Icon(Icons.add_circle_outline, color: Colors.blueAccent),
+      label: const Text("Custom"),
+      style: ElevatedButton.styleFrom(
+        backgroundColor: Colors.white,
+        foregroundColor: Colors.black87,
+        elevation: 0,
+        side: BorderSide(color: Colors.grey.shade300),
+        padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 12),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      ),
     );
   }
 }
 
-class _WaterLog {
-  final double amount;
-  final DateTime time;
+class _RingPainter extends CustomPainter {
+  final double progress;
+  final double ringWidth;
+  final Color ringColor;
+  final Color baseColor;
 
-  _WaterLog({required this.amount, required this.time});
+  _RingPainter({
+    required this.progress,
+    required this.ringWidth,
+    required this.ringColor,
+    required this.baseColor,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final center = Offset(size.width / 2, size.height / 2);
+    final radius = (min(size.width, size.height) - ringWidth) / 2;
+
+    final basePaint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = ringWidth
+      ..strokeCap = StrokeCap.round
+      ..isAntiAlias = true
+      ..color = baseColor;
+    canvas.drawCircle(center, radius, basePaint);
+
+    final arcPaint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = ringWidth
+      ..strokeCap = StrokeCap.round
+      ..isAntiAlias = true
+      ..color = ringColor;
+
+    canvas.drawArc(
+        Rect.fromCircle(center: center, radius: radius),
+        -pi / 2,
+        2 * pi * progress,
+        false,
+        arcPaint);
+  }
+
+  @override
+  bool shouldRepaint(_RingPainter oldDelegate) {
+    return oldDelegate.progress != progress;
+  }
 }
