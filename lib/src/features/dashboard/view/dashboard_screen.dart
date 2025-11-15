@@ -1,3 +1,4 @@
+// file: lib/src/features/dashboard/view/dashboard_screen.dart
 import 'dart:async';
 import 'dart:math';
 import 'package:flutter/material.dart';
@@ -8,9 +9,13 @@ import 'package:lottie/lottie.dart';
 import 'widgets/bottom_nav_bar.dart'; // Ensure this file exists or remove this import if not needed
 import 'package:flutter/cupertino.dart';
 
+// ADDED: import paths for new screens
+import 'package:fytlyf/src/features/dashboard/view/streak_screen.dart';
+import 'package:fytlyf/src/features/dashboard/view/notification_screen.dart';
+import 'package:fytlyf/src/features/dashboard/view/profile_screen.dart';
+
 // ADDED: import for water screen
 import '../nutritions/water_screen.dart';
-
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -777,18 +782,79 @@ class _DashboardScreenState extends State<DashboardScreen>
                         ),
                       ],
                     ),
+
+                    // ---------- TAPPABLE ICONS ----------
                     Row(
                       children: [
-                        Icon(Icons.local_fire_department_rounded,
-                            color: Colors.orange, size: width * 0.085),
-                        SizedBox(width: width * 0.035),
-                        Icon(Iconsax.notification,
-                            color: Colors.black87, size: width * 0.07),
-                        SizedBox(width: width * 0.025),
-                        Icon(Iconsax.profile_circle,
-                            color: Colors.black87, size: width * 0.085),
+                        // Streak (fire) icon -> StreakScreen
+                        InkWell(
+                          borderRadius: BorderRadius.circular(12),
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => const StreakScreen(),
+                              ),
+                            );
+                          },
+                          child: Padding(
+                            padding: EdgeInsets.all(width * 0.02),
+                            child: Icon(
+                              Icons.local_fire_department_rounded,
+                              color: Colors.orange,
+                              size: width * 0.085,
+                            ),
+                          ),
+                        ),
+
+                        SizedBox(width: width * 0.01),
+
+                        // Notification icon -> NotificationScreen
+                        InkWell(
+                          borderRadius: BorderRadius.circular(12),
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => const NotificationScreen(),
+                              ),
+                            );
+                          },
+                          child: Padding(
+                            padding: EdgeInsets.all(width * 0.02),
+                            child: Icon(
+                              Iconsax.notification,
+                              color: Colors.black87,
+                              size: width * 0.07,
+                            ),
+                          ),
+                        ),
+
+                        SizedBox(width: width * 0.01),
+
+                        // Profile icon -> ProfileScreen
+                        InkWell(
+                          borderRadius: BorderRadius.circular(12),
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => const ProfileScreen(),
+                              ),
+                            );
+                          },
+                          child: Padding(
+                            padding: EdgeInsets.all(width * 0.02),
+                            child: Icon(
+                              Iconsax.profile_circle,
+                              color: Colors.black87,
+                              size: width * 0.085,
+                            ),
+                          ),
+                        ),
                       ],
                     ),
+                    // ---------- END TAPPABLE ICONS ----------
                   ],
                 ),
               ),
@@ -832,8 +898,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                 height: cardHeight,
                 child: PageView.builder(
                   controller: _pageController,
-                  onPageChanged: (index) =>
-                      setState(() => _currentPage = index),
+                  onPageChanged: (index) => setState(() => _currentPage = index),
                   itemBuilder: (context, index) {
                     final realIndex = index % totalCards;
                     return _buildBigCard(realIndex, cardHeight, width);
@@ -844,9 +909,7 @@ class _DashboardScreenState extends State<DashboardScreen>
               // SMALL CARDS
               Padding(
                 padding: EdgeInsets.only(
-                    left: width * 0.03,
-                    right: width * 0.03,
-                    top: height * 0.01),
+                    left: width * 0.03, right: width * 0.03, top: height * 0.01),
                 child: Column(
                   children: [
                     Row(
@@ -890,7 +953,6 @@ class _DashboardScreenState extends State<DashboardScreen>
                               right: index < 2 ? width * 0.022 : 0),
                           child: GestureDetector(
                             onTap: onTap,
-                            // ---------------- FIXED AREA STARTS HERE ----------------
                             child: Container(
                               width: equalCardWidth,
                               height: smallCardHeight,
@@ -924,7 +986,8 @@ class _DashboardScreenState extends State<DashboardScreen>
                                           value: targetValue,
                                           backgroundColor:
                                           iconColor.withOpacity(0.15),
-                                          valueColor: AlwaysStoppedAnimation(iconColor),
+                                          valueColor:
+                                          AlwaysStoppedAnimation(iconColor),
                                           strokeWidth: 5,
                                         ),
                                       ),
@@ -956,11 +1019,10 @@ class _DashboardScreenState extends State<DashboardScreen>
                   ],
                 ),
               ),
-              // ---------------- FIXED AREA ENDS HERE ----------------
 
               SizedBox(height: height * 0.02),
 
-              // DISCOVER SECTION (Was missing but variables existed)
+              // DISCOVER SECTION
               Padding(
                 padding: EdgeInsets.symmetric(horizontal: width * 0.05),
                 child: Row(
