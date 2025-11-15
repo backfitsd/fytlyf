@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:fytlyf/src/features/dashboard/challenge/challenge_screen.dart';
 import 'widgets/bottom_nav_bar.dart';
 import 'dashboard_screen.dart';
 import '../Workout/workout_screen.dart';
 import '../Community/community_screen.dart';
 import '../nutritions/nutrition_screen.dart';
-import '../Rewards/rewards_screen.dart';
+import '../Challenge/challenge_screen.dart' hide ChallengeScreen;
 
 class DashboardRoot extends StatefulWidget {
   const DashboardRoot({super.key});
@@ -22,7 +23,7 @@ class _DashboardRootState extends State<DashboardRoot> {
     WorkoutScreen(),
     CommunityScreen(),
     NutritionScreen(),
-    RewardsScreen(),
+    ChallengeScreen(),
   ];
 
   void _onNavTap(int index) {

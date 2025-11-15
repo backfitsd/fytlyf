@@ -1,8 +1,9 @@
+import 'package:fytlyf/src/features/dashboard/challenge/challenge_screen.dart';
 import 'package:fytlyf/src/features/dashboard/view/dashboard_root.dart' show DashboardRoot;
 import 'package:fytlyf/src/features/dashboard/Workout/workout_screen.dart' show WorkoutScreen;
 import 'package:fytlyf/src/features/dashboard/Community/community_screen.dart' show CommunityScreen;
 import 'package:fytlyf/src/features/dashboard/nutritions/nutrition_screen.dart' show NutritionScreen;
-import 'package:fytlyf/src/features/dashboard/Rewards/rewards_screen.dart' show RewardsScreen;
+import 'package:fytlyf/src/features/dashboard/Challenge/challenge_screen.dart' show RewardsScreen;
 import 'package:go_router/go_router.dart';
 
 // --- Core + Onboarding Imports ---
@@ -75,7 +76,7 @@ final GoRouter appRouter = GoRouter(
     ),
     GoRoute(
       path: '/rewards',
-      builder: (context, state) => const RewardsScreen(),
+      builder: (context, state) => const ChallengeScreen(),
     ),
   ],
 );
