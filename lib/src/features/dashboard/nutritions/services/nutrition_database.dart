@@ -1,78 +1,152 @@
-// file: lib/src/features/dashboard/nutritions/services/nutrition_database.dart
-// Local JSON nutrition database loader + search engine.
-// Exposes init(), loadDatabase(), search(), foodById()
-
 import 'dart:convert';
-import 'package:flutter/services.dart' show rootBundle;
+import 'dart:io';
+import 'package:flutter/foundation.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:http/http.dart' as http;
 
 class NutritionDatabase {
-  static List<Map<String, dynamic>> _foods = [];
-  static bool _loaded = false;
+  /// -----------------------------------------------------------
+  /// ✅ Correct Firebase Storage URL  (PUBLIC DOWNLOAD LINK)
+  /// Make sure this exists:
+  /// storage > nutrition > nutrition_10000.json
+  /// -----------------------------------------------------------
+  static const String remoteUrl =
+      "https://firebasestorage.googleapis.com/v0/b/fytlyf-production-realtime.appspot.com/o/nutrition%2Fnutrition_10000.json?alt=media";
 
-  /// Backwards-compatible initializer used in main.dart
-  /// You can call either NutritionDatabase.init() or NutritionDatabase.loadDatabase()
-  static Future<void> init() async => loadDatabase();
+  /// internal list
+  static List<dynamic> _foods = [];
 
-  /// Load the JSON file from assets and parse into memory.
-  static Future<void> loadDatabase() async {
-    if (_loaded) return;
+  static bool initialized = false;
+
+  /// -----------------------------------------------------------
+  /// INIT — Load Local → then Refresh from Cloud
+  /// -----------------------------------------------------------
+  static Future<void> init() async {
+    if (initialized) return;
+    initialized = true;
+
+    final dir = await getApplicationDocumentsDirectory();
+    final file = File("${dir.path}/nutrition.json");
+
+    // Load local copy (FAST)
+    if (await file.exists()) {
+      try {
+        final text = await file.readAsString();
+        _foods = json.decode(text);
+        debugPrint("⭐ Loaded local nutrition DB (${_foods.length})");
+      } catch (_) {}
+    }
+
+    // Download fresh copy
     try {
-      final jsonStr = await rootBundle.loadString('assets/data/nutrition.json');
-      final List parsed = json.decode(jsonStr) as List;
-      _foods = parsed.map<Map<String, dynamic>>((e) {
-        return Map<String, dynamic>.from(e as Map);
-      }).toList();
+      final resp = await http.get(Uri.parse(remoteUrl));
+      if (resp.statusCode == 200) {
+        await file.writeAsString(resp.body);
+        _foods = json.decode(resp.body);
+        debugPrint("🔥 Updated nutrition DB from Cloud (${_foods.length})");
+      }
     } catch (e) {
-      // If load fails, keep empty but mark loaded to avoid repeated attempts
-      _foods = [];
-    } finally {
-      _loaded = true;
+      debugPrint("❌ Nutrition DB fetch error: $e");
     }
   }
 
-  /// Fast case-insensitive search by name (partial match)
-  static Future<List<Map<String, dynamic>>> search(String query, {int limit = 50}) async {
-    if (!_loaded) await loadDatabase();
-    final q = query.toLowerCase().trim();
+  /// -----------------------------------------------------------
+  /// SEARCH — Optimized for large dataset (10k–100k)
+  /// -----------------------------------------------------------
+  static List<Map<String, dynamic>> search(String query, {int limit = 50}) {
+    final q = query.trim().toLowerCase();
     if (q.isEmpty) return [];
-    final results = <Map<String, dynamic>>[];
-    for (final item in _foods) {
-      final name = (item['name'] ?? '').toString().toLowerCase();
-      if (name.contains(q)) {
-        results.add(item);
-        if (results.length >= limit) break;
+
+    final List<Map<String, dynamic>> results = [];
+
+    for (var item in _foods) {
+      final name = (item["name"] ?? "").toString().toLowerCase();
+
+      // Starts-with = highest priority
+      if (name.startsWith(q)) {
+        results.insert(0, Map<String, dynamic>.from(item));
       }
+      // contains = lower priority
+      else if (name.contains(q)) {
+        results.add(Map<String, dynamic>.from(item));
+      }
+
+      if (results.length >= limit) break;
     }
     return results;
   }
 
-  /// Return all foods (rarely needed)
-  static Future<List<Map<String, dynamic>>> allFoods() async {
-    if (!_loaded) await loadDatabase();
-    return _foods;
+  /// -----------------------------------------------------------
+  /// FIND FOOD BY ID (for Firestore retrieval)
+  /// -----------------------------------------------------------
+  static Map<String, dynamic>? findById(dynamic id) {
+    try {
+      return _foods.firstWhere(
+            (f) => f["id"].toString() == id.toString(),
+        orElse: () => null,
+      );
+    } catch (_) {
+      return null;
+    }
   }
 
-  /// Find a food by its numeric id
-  static Map<String, dynamic>? foodById(dynamic id) {
-    if (!_loaded) {
-      // Not awaited here to keep API sync — caller should call init() at app start
-      // but also be defensive and do a linear search (may return null)
-    }
-    if (id == null) return null;
+  /// -----------------------------------------------------------
+  /// CALCULATE NUTRITION VIA JSON SYSTEM
+  ///
+  /// Example:
+  ///  id: 501 (milk)
+  ///  unit: "cup"
+  ///  amount: 1
+  ///
+  /// Uses:
+  ///   measures → convert cup → gram
+  ///   nutrition_per_100g → scale macros
+  /// -----------------------------------------------------------
+  static Map<String, dynamic> calculateNutrition({
+    required Map<String, dynamic> food,
+    required String unit,
+    required double amount,
+  }) {
     try {
-      // support string or num id
-      if (id is String) {
-        final intId = int.tryParse(id);
-        if (intId != null) {
-          return _foods.firstWhere((e) => (e['id'] is num ? (e['id'] as num).toInt() : e['id']) == intId, orElse: () => {});
-        }
-      } else if (id is num) {
-        final intId = id.toInt();
-        return _foods.firstWhere((e) => (e['id'] is num ? (e['id'] as num).toInt() : e['id']) == intId, orElse: () => {});
-      } else if (id is int) {
-        return _foods.firstWhere((e) => (e['id'] is num ? (e['id'] as num).toInt() : e['id']) == id, orElse: () => {});
+      final base100 = food["nutrition_per_100g"];
+      final measures = food["measures"];
+
+      if (measures == null || !measures.containsKey(unit)) {
+        return {
+          "calories": 0.0,
+          "protein": 0.0,
+          "carbs": 0.0,
+          "fat": 0.0,
+          "weight_gram": 0.0,
+        };
       }
-    } catch (_) {}
-    return null;
+
+      // Amount to grams
+      final double gramValueOfUnit = measures[unit].toDouble();
+      final double totalGram = gramValueOfUnit * amount;
+
+      // Multiply values relative to 100g
+      final ratio = totalGram / 100.0;
+
+      return {
+        "calories": (base100["calories"] * ratio),
+        "protein": (base100["protein"] * ratio),
+        "carbs": (base100["carbs"] * ratio),
+        "fat": (base100["fat"] * ratio),
+        "weight_gram": totalGram,
+      };
+    } catch (e) {
+      debugPrint("❌ Nutrition calculation error: $e");
+      return {
+        "calories": 0.0,
+        "protein": 0.0,
+        "carbs": 0.0,
+        "fat": 0.0,
+        "weight_gram": 0.0,
+      };
+    }
   }
+
+  /// Get all food items
+  static List<dynamic> get all => _foods;
 }

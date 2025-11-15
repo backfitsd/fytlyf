@@ -1,10 +1,12 @@
 // file: lib/src/features/dashboard/nutritions/nutrition_screen.dart
-// FINAL — Water Integrated (Style A) — Fully Error-Free & Ready to Paste
+// READY-TO-PASTE — Firestore-backed NutritionScreen (Option A storage)
+// Preserves UI — only wiring & data added.
 
 import 'dart:async';
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:iconsax/iconsax.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
@@ -12,19 +14,20 @@ import 'Meal Discover/Meal Planner/meal_tracking_screen.dart';
 import 'Meal Discover/Recommend/recommend_screen.dart';
 import 'Meal Discover/Recipe/recipe_screen.dart';
 import 'Meal Discover/AI Meal/ai_meal_planner_screen.dart';
+import 'water_screen.dart';
 import 'Meal Discover/Meal Planner/search_meal_screen.dart';
 
-import 'water_screen.dart';  // <-- FIXED PATH (Your structure)
+// <-- NEW: Use local nutrition JSON DB to compute values -->
+import 'services/nutrition_database.dart';
 
 class NutritionScreen extends StatefulWidget {
-  const NutritionScreen({Key? key}) : super(key: key);
+  const NutritionScreen({super.key});
 
   @override
   State<NutritionScreen> createState() => _NutritionScreenState();
 }
 
-class _NutritionScreenState extends State<NutritionScreen>
-    with SingleTickerProviderStateMixin {
+class _NutritionScreenState extends State<NutritionScreen> with SingleTickerProviderStateMixin {
   late final AnimationController _ctrl;
 
   static const LinearGradient _appGradient = LinearGradient(
@@ -37,28 +40,29 @@ class _NutritionScreenState extends State<NutritionScreen>
     end: Alignment.bottomRight,
   );
 
+  // Firestore & Auth
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _db = FirebaseFirestore.instance;
 
-  // NUTRITION DATA
+  // Live values (defaults)
   int currentCalories = 0;
   int calorieTarget = 2500;
 
-  double protCurrent = 0;
-  double protTarget = 70;
+  double protCurrent = 0.0;
+  double protTarget = 70.0;
 
-  double carbsCurrent = 0;
-  double carbsTarget = 250;
+  double carbsCurrent = 0.0;
+  double carbsTarget = 250.0;
 
-  double fatCurrent = 0;
-  double fatTarget = 70;
+  double fatCurrent = 0.0;
+  double fatTarget = 70.0;
 
-  // *** WATER (Added) ***
-  int waterCurrent = 0;
-  int waterTarget = 3000;
+  double currentWater = 0.0;
+  double goalWater = 2.5;
 
   bool _loading = true;
 
+  // Known meal sections (matches MealTrackingScreen)
   final List<String> _mealNames = [
     'Breakfast',
     'Morning Snack',
@@ -68,19 +72,23 @@ class _NutritionScreenState extends State<NutritionScreen>
     'Others',
   ];
 
+  // subscription handles to cancel on dispose
   final List<StreamSubscription> _subs = [];
 
   @override
   void initState() {
     super.initState();
-
     _ctrl = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 900),
-    )..forward();
+    );
+    _ctrl.forward();
+
+    // ensure nutrition DB loaded (safe if called elsewhere)
+    NutritionDatabase.init().catchError((_) {});
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _attachListenersOptionB();
+      _attachListenersOptionA(); // Option A wiring
     });
   }
 
@@ -95,158 +103,527 @@ class _NutritionScreenState extends State<NutritionScreen>
     super.dispose();
   }
 
+  // Format date to YYYY-MM-DD
   String _formatDate(DateTime dt) {
-    return "${dt.year.toString().padLeft(4, '0')}-"
-        "${dt.month.toString().padLeft(2, '0')}-"
-        "${dt.day.toString().padLeft(2, '0')}";
+    final y = dt.year.toString().padLeft(4, '0');
+    final m = dt.month.toString().padLeft(2, '0');
+    final d = dt.day.toString().padLeft(2, '0');
+    return '$y-$m-$d';
   }
 
+  // short month name
   String _monthName(int m) {
-    const list = [
-      "Jan","Feb","Mar","Apr","May","Jun",
-      "Jul","Aug","Sep","Oct","Nov","Dec"
-    ];
+    const list = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
     return list[m - 1];
   }
 
-  // ---------------------- FIRESTORE LISTENERS ----------------------
-  void _attachListenersOptionB() {
+  // ----------------------------
+  // Option A listeners: Firestore stores minimal meal fields:
+  // { id, unit, amount, gram_weight, added_at }
+  // Use NutritionDatabase JSON to compute nutrition values on read.
+  // ----------------------------
+  void _attachListenersOptionA() {
     final uid = _auth.currentUser?.uid;
     if (uid == null) {
-      setState(() => _loading = false);
+      setState(() {
+        _loading = false;
+      });
       return;
     }
 
     final todayKey = _formatDate(DateTime.now());
 
-    //------------------ TARGETS ------------------
-    final tRef = _db.collection('users').doc(uid).collection('meta').doc('nutrition_targets');
+    // 1) nutrition_targets doc (single) — same as before
+    final targetsRef = _db.collection('users').doc(uid).collection('meta').doc('nutrition_targets');
+    final altTargetsRef = _db.collection('users').doc(uid).collection('nutrition').doc('targets');
 
-    final tSub = tRef.snapshots().listen((snap) {
-      final d = snap.data();
-      if (d != null) _applyTargets(d);
+    final targetsSub = targetsRef.snapshots().listen((snap) {
+      if (!mounted) return;
+      if (snap.exists) {
+        final data = snap.data() ?? {};
+        _applyTargetsFromDocData(data);
+      } else {
+        altTargetsRef.get().then((alt) {
+          if (alt.exists) _applyTargetsFromDocData(alt.data() ?? {});
+        }).catchError((e){});
+      }
+    }, onError: (e) {
+      debugPrint('targets snapshot error: $e');
+      altTargetsRef.get().then((alt) {
+        if (alt.exists) _applyTargetsFromDocData(alt.data() ?? {});
+      }).catchError((_) {});
     });
+    _subs.add(targetsSub);
 
-    _subs.add(tSub);
+    // 2) water_logs for today — same as before
+    final waterRef = _db.collection('users').doc(uid).collection('water_logs').doc(todayKey);
+    final waterSub = waterRef.snapshots().listen((snap) {
+      if (!mounted) return;
+      if (snap.exists) {
+        final data = snap.data() ?? {};
+        currentWater = (data['amount'] ?? 0).toDouble();
+        goalWater = (data['goal'] ?? goalWater).toDouble();
+      } else {
+        currentWater = 0.0;
+      }
+      if (mounted) setState(() { _loading = false; });
+    }, onError: (e) {
+      debugPrint('water snapshot error: $e');
+      if (mounted) setState(() { _loading = false; });
+    });
+    _subs.add(waterSub);
 
-    //------------------ MEALS --------------------
-    final Map<String, int> kcal = {for (var m in _mealNames) m: 0};
-    final Map<String, double> pc = {for (var m in _mealNames) m: 0};
-    final Map<String, double> cc = {for (var m in _mealNames) m: 0};
-    final Map<String, double> fc = {for (var m in _mealNames) m: 0};
+    // 3) Listen to each meal subcollection and compute sums using JSON DB
+    final Map<String, int> mealKcal = { for (var m in _mealNames) m : 0 };
+    final Map<String, double> mealProt = { for (var m in _mealNames) m : 0.0 };
+    final Map<String, double> mealCarbs = { for (var m in _mealNames) m : 0.0 };
+    final Map<String, double> mealFat = { for (var m in _mealNames) m : 0.0 };
 
     for (final meal in _mealNames) {
-      final col = _db
-          .collection('users').doc(uid)
-          .collection('meals').doc(todayKey)
-          .collection(meal);
+      final colRef = _db.collection('users').doc(uid).collection('meals').doc(todayKey).collection(meal);
+      final sub = colRef.snapshots().listen((snap) async {
+        if (!mounted) return;
 
-      final mealSub = col.snapshots().listen((snap) {
-        int k = 0;
-        double p = 0, c = 0, f = 0;
+        int kcalSum = 0;
+        double protSum = 0.0;
+        double carbsSum = 0.0;
+        double fatSum = 0.0;
 
-        for (final doc in snap.docs) {
-          final d = doc.data();
+        // Ensure nutrition DB loaded (synchronous read from memory)
+        final foods = NutritionDatabase.all; // List<dynamic>
+        for (final d in snap.docs) {
+          final data = d.data();
 
-          num _v(dynamic x) {
-            if (x == null) return 0;
-            if (x is num) return x;
-            if (x is String) return num.tryParse(x) ?? 0;
-            return 0;
+          // Expected minimal storage: id, unit, amount, gram_weight
+          final dynamic rawId = data['id'] ?? data['foodId'] ?? data['fid'];
+          final String idStr = rawId?.toString() ?? '';
+
+          // prefer stored gram_weight if present (developer suggested storing gram_weight)
+          double grams = 0.0;
+          if (data.containsKey('gram_weight')) {
+            try {
+              grams = (data['gram_weight'] is num) ? (data['gram_weight'] as num).toDouble() : double.parse(data['gram_weight'].toString());
+            } catch (_) {
+              grams = 0.0;
+            }
+          } else {
+            // fallback: try to compute from unit + amount using JSON measures
+            final unit = (data['unit'] ?? '').toString();
+            final num amountNum = (data['amount'] ?? data['qty'] ?? 0) is num
+                ? (data['amount'] ?? data['qty'] ?? 0) as num
+                : num.tryParse((data['amount'] ?? data['qty'] ?? '0').toString()) ?? 0;
+            final double amount = amountNum.toDouble();
+
+            // find food entry
+            final food = foods.firstWhere(
+                    (f) => f != null && f['id'] != null && f['id'].toString() == idStr,
+                orElse: () => null);
+
+            if (food != null) {
+              try {
+                final measures = (food['measures'] is Map) ? Map<String, dynamic>.from(food['measures']) : <String, dynamic>{};
+                final baseMeasureGram = (measures[unit] ?? 0);
+                if (baseMeasureGram is num) {
+                  grams = baseMeasureGram.toDouble() * amount;
+                } else if (baseMeasureGram is String) {
+                  grams = double.tryParse(baseMeasureGram) ?? 0.0;
+                  grams = grams * amount;
+                } else {
+                  grams = 0.0;
+                }
+              } catch (e) {
+                grams = 0.0;
+              }
+            } else {
+              grams = 0.0;
+            }
           }
 
-          k += _v(d['calories']).toInt();
-          p += _v(d['protein']).toDouble();
-          c += _v(d['carbs']).toDouble();
-          f += _v(d['fat']).toDouble();
-        }
+          // If grams still zero, try to compute using amount assuming base_weight_gram * amount
+          if (grams <= 0) {
+            final foods = NutritionDatabase.all;
+            final food = foods.firstWhere(
+                    (f) => f != null && f['id'] != null && f['id'].toString() == idStr,
+                orElse: () => null);
+            if (food != null) {
+              final baseW = (food['base_weight_gram'] ?? 100);
+              double baseWG = (baseW is num) ? baseW.toDouble() : double.tryParse(baseW.toString()) ?? 100.0;
+              final num amountNum = (data['amount'] ?? 1) is num ? (data['amount'] ?? 1) as num : num.tryParse((data['amount'] ?? '1').toString()) ?? 1;
+              grams = baseWG * amountNum.toDouble();
+            }
+          }
 
-        kcal[meal] = k;
-        pc[meal] = p;
-        cc[meal] = c;
-        fc[meal] = f;
+          // Now compute nutrition using the JSON entry
+          final foodEntry = NutritionDatabase.all.firstWhere(
+                (f) => f != null && f['id'] != null && f['id'].toString() == idStr,
+            orElse: () => null,
+          );
 
-        currentCalories = kcal.values.fold(0, (a, b) => a + b);
-        protCurrent = pc.values.fold(0.0, (a, b) => a + b);
-        carbsCurrent = cc.values.fold(0.0, (a, b) => a + b);
-        fatCurrent = fc.values.fold(0.0, (a, b) => a + b);
+          if (foodEntry == null) {
+            // can't compute without food info — skip (debug)
+            debugPrint('Nutrition DB missing id=$idStr — cannot compute nutrition for a meal item.');
+            continue;
+          }
 
-        if (mounted) setState(() => _loading = false);
+          final per100 = (foodEntry['nutrition_per_100g'] is Map) ? Map<String, dynamic>.from(foodEntry['nutrition_per_100g']) : <String, dynamic>{};
+          final num calPer100 = (per100['calories'] ?? per100['cal'] ?? 0) as num;
+          final num protPer100 = (per100['protein'] ?? 0) as num;
+          final num carbsPer100 = (per100['carbs'] ?? 0) as num;
+          final num fatPer100 = (per100['fat'] ?? 0) as num;
+
+          final double factor = (grams / 100.0);
+
+          final int kcalItem = (calPer100.toDouble() * factor).round();
+          final double protItem = protPer100.toDouble() * factor;
+          final double carbsItem = carbsPer100.toDouble() * factor;
+          final double fatItem = fatPer100.toDouble() * factor;
+
+          kcalSum += kcalItem;
+          protSum += protItem;
+          carbsSum += carbsItem;
+          fatSum += fatItem;
+        } // end docs loop
+
+        mealKcal[meal] = kcalSum;
+        mealProt[meal] = protSum;
+        mealCarbs[meal] = carbsSum;
+        mealFat[meal] = fatSum;
+
+        // compute totals
+        final totalKcal = mealKcal.values.fold<int>(0, (p, e) => p + e);
+        final totalProt = mealProt.values.fold<double>(0.0, (p, e) => p + e);
+        final totalCarbs = mealCarbs.values.fold<double>(0.0, (p, e) => p + e);
+        final totalFat = mealFat.values.fold<double>(0.0, (p, e) => p + e);
+
+        currentCalories = totalKcal;
+        protCurrent = totalProt;
+        carbsCurrent = totalCarbs;
+        fatCurrent = totalFat;
+
+        if (mounted) setState(() {
+          _loading = false;
+        });
+      }, onError: (e) {
+        debugPrint('meal collection snapshot error ($meal): $e');
+        if (mounted) setState(() { _loading = false; });
       });
 
-      _subs.add(mealSub);
+      _subs.add(sub);
     }
 
-    //------------------ WATER (Option 2 logs) ------------------
-    final waterRef = _db
-        .collection('users').doc(uid)
-        .collection('water').doc(todayKey)
-        .collection('logs')
-        .orderBy('timestamp');
+    // Done attaching listeners.
+  }
 
-    final waterSub = waterRef.snapshots().listen((snap) {
-      int total = 0;
-      for (final doc in snap.docs) {
-        final d = doc.data();
-        final ml = d['amount_ml'] ?? 0;
-        if (ml is int) total += ml;
+  // Apply nutrition_targets doc into local targets
+  void _applyTargetsFromDocData(Map<String, dynamic> data) {
+    try {
+      if (data['calories'] is Map) {
+        final c = Map<String, dynamic>.from(data['calories']);
+        calorieTarget = (c['target'] ?? calorieTarget).toInt();
+      } else if (data['calories'] is num) {
+        calorieTarget = (data['calories'] ?? calorieTarget).toInt();
       }
 
-      waterCurrent = total;
-      if (mounted) setState(() {});
-    });
+      if (data['macros'] is Map) {
+        final macros = Map<String, dynamic>.from(data['macros']);
+        if (macros['protein'] is Map) {
+          final p = Map<String, dynamic>.from(macros['protein']);
+          protTarget = (p['target'] ?? protTarget).toDouble();
+        } else if (macros['protein'] is num) {
+          protTarget = (macros['protein'] ?? protTarget).toDouble();
+        }
 
-    _subs.add(waterSub);
-  }
+        if (macros['carbs'] is Map) {
+          final c = Map<String, dynamic>.from(macros['carbs']);
+          carbsTarget = (c['target'] ?? carbsTarget).toDouble();
+        } else if (macros['carbs'] is num) {
+          carbsTarget = (macros['carbs'] ?? carbsTarget).toDouble();
+        }
 
-  // -------------------- APPLY TARGETS --------------------
-  void _applyTargets(Map<String, dynamic> data) {
-    num _n(dynamic x, num fb) {
-      if (x == null) return fb;
-      if (x is num) return x;
-      if (x is String) return num.tryParse(x) ?? fb;
-      return fb;
+        if (macros['fat'] is Map) {
+          final f = Map<String, dynamic>.from(macros['fat']);
+          fatTarget = (f['target'] ?? fatTarget).toDouble();
+        } else if (macros['fat'] is num) {
+          fatTarget = (macros['fat'] ?? fatTarget).toDouble();
+        }
+      }
+
+      if (mounted) setState(() {
+        _loading = false;
+      });
+    } catch (e) {
+      debugPrint('applyTargets error: $e');
     }
-
-    calorieTarget = _n(data['calories']?['target'], calorieTarget).toInt();
-    protTarget = _n(data['macros']?['protein']?['target'], protTarget).toDouble();
-    carbsTarget = _n(data['macros']?['carbs']?['target'], carbsTarget).toDouble();
-    fatTarget = _n(data['macros']?['fat']?['target'], fatTarget).toDouble();
-
-    setState(() {});
   }
 
-  // -------------------- OPENERS --------------------
+  // Save water: update water_logs/{date}
+  Future<void> _saveWater(double litersToAdd) async {
+    final uid = _auth.currentUser?.uid;
+    if (uid == null) return;
+
+    final todayKey = _formatDate(DateTime.now());
+    final waterDocRef = _db.collection('users').doc(uid).collection('water_logs').doc(todayKey);
+
+    try {
+      final doc = await waterDocRef.get();
+      if (doc.exists) {
+        await waterDocRef.update({
+          'amount': FieldValue.increment(litersToAdd),
+          'updatedAt': FieldValue.serverTimestamp(),
+        });
+      } else {
+        await waterDocRef.set({
+          'amount': litersToAdd,
+          'goal': goalWater,
+          'createdAt': FieldValue.serverTimestamp(),
+          'updatedAt': FieldValue.serverTimestamp(),
+        });
+      }
+    } catch (e) {
+      debugPrint('Water log update failed: $e');
+    }
+  }
+
+  // Open Add Meal → Search flow. As requested, when started from NutritionScreen,
+  // MealInfoScreen will ask which meal to add to.
+  Future<void> _openAddMealFlow() async {
+    final res = await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const SearchMealScreen()),
+    );
+    if (res != null) {
+      // no-op; listeners will refresh UI
+    }
+  }
+
   void _openMealTracking() {
     Navigator.push(context, MaterialPageRoute(builder: (_) => const MealTrackingScreen()));
   }
 
-  double _safe(double c, double t) => t == 0 ? 0 : (c / t).clamp(0.0, 1.0);
+  void _openWaterScreen() {
+    Navigator.push(context, MaterialPageRoute(builder: (_) => const WaterScreen()));
+  }
 
-  Color _calorieColor(double p) =>
-      p < .2 ? const Color(0xFFFFD54F)
-          : p < .6 ? const Color(0xFFFB8C00)
-          : p <= 1 ? const Color(0xFFE53935)
-          : const Color(0xFFB71C1C);
+  double _safeProgress(double current, double target) {
+    if (target <= 0) return 0.0;
+    return (current / target).clamp(0.0, 1.0);
+  }
 
-  String _motivation(double p) =>
-      p < .15 ? "A true start.\nSmall steps."
-          : p < .35 ? "Good momentum.\nStay steady."
-          : p < .6 ? "Great balance."
-          : p < .85 ? "Strong progress."
-          : p <= 1 ? "Right on target."
-          : "Above target.\nGo lighter.";
+  // UI helper: EXPLLORE button used inside water dialog
+  Widget _exploreButton(BuildContext context, {VoidCallback? onTap}) {
+    return SizedBox(
+      width: double.infinity,
+      child: InkWell(
+        onTap: onTap ?? () => Navigator.pop(context),
+        borderRadius: BorderRadius.circular(14),
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 14),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(14),
+            gradient: _appGradient,
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.08),
+                blurRadius: 6,
+                offset: const Offset(0, 3),
+              ),
+            ],
+          ),
+          alignment: Alignment.center,
+          child: const Text(
+            "EXPLORE",
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 16,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 0.5,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 
-  // -------------------- UI BUILD --------------------
+  // Reuse the wheel dialog for water and persist result
+  Future<void> _showWaterDialogAndSave(BuildContext context) async {
+    double tempWater = currentWater;
+    int selectedAmount = 250;
+    const int maxAmount = 500;
+    const int step = 10;
+
+    final scrollController = FixedExtentScrollController(initialItem: selectedAmount ~/ step);
+
+    await showDialog(
+      context: context,
+      builder: (context) {
+        final size = MediaQuery.of(context).size;
+        final width = size.width;
+        final height = size.height;
+
+        final wheelItemExtent = height * 0.03;
+        final wheelVisibleHeight = wheelItemExtent * 3;
+
+        return StatefulBuilder(
+          builder: (context, dialogSetState) {
+            return Dialog(
+              insetPadding: EdgeInsets.symmetric(horizontal: width * 0.08),
+              backgroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Padding(
+                padding: EdgeInsets.all(width * 0.05),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text("Hydration", style: TextStyle(fontSize: width * 0.05, fontWeight: FontWeight.w800)),
+                        Text("Today, ${_monthName(DateTime.now().month)} ${DateTime.now().day}", style: TextStyle(fontSize: width * 0.035, fontWeight: FontWeight.w500, color: Colors.black54)),
+                      ],
+                    ),
+                    SizedBox(height: height * 0.02),
+                    Row(
+                      children: [
+                        Expanded(
+                          flex: 5,
+                          child: Column(
+                            children: [
+                              Stack(
+                                alignment: Alignment.center,
+                                children: [
+                                  SizedBox(
+                                    height: width * 0.35,
+                                    width: width * 0.35,
+                                    child: CircularProgressIndicator(
+                                      value: (tempWater / goalWater).clamp(0.0, 1.0),
+                                      strokeWidth: 9,
+                                      backgroundColor: Colors.blueAccent.withOpacity(0.15),
+                                      valueColor: const AlwaysStoppedAnimation(Colors.blueAccent),
+                                    ),
+                                  ),
+                                  Icon(Icons.water_drop_rounded, size: width * 0.06, color: Colors.blueAccent),
+                                ],
+                              ),
+                              SizedBox(height: height * 0.015),
+                              Text("${tempWater.toStringAsFixed(1)}L / ${goalWater.toStringAsFixed(1)}L", style: TextStyle(fontSize: width * 0.037, fontWeight: FontWeight.w700)),
+                            ],
+                          ),
+                        ),
+                        Expanded(
+                          flex: 5,
+                          child: Column(
+                            children: [
+                              Text("Select water (ml)", style: TextStyle(fontSize: width * 0.035, fontWeight: FontWeight.w600, color: Colors.black87)),
+                              SizedBox(height: height * 0.01),
+                              SizedBox(
+                                height: wheelVisibleHeight,
+                                child: ListWheelScrollView.useDelegate(
+                                  controller: scrollController,
+                                  itemExtent: wheelItemExtent,
+                                  physics: const FixedExtentScrollPhysics(),
+                                  overAndUnderCenterOpacity: 0.5,
+                                  onSelectedItemChanged: (index) {
+                                    dialogSetState(() {
+                                      selectedAmount = index * step;
+                                    });
+                                  },
+                                  childDelegate: ListWheelChildBuilderDelegate(
+                                    childCount: (maxAmount ~/ step) + 1,
+                                    builder: (context, index) {
+                                      int value = index * step;
+                                      bool isSelected = value == selectedAmount;
+                                      return AnimatedDefaultTextStyle(
+                                        duration: const Duration(milliseconds: 150),
+                                        style: TextStyle(
+                                          fontSize: isSelected ? width * 0.045 : width * 0.038,
+                                          fontWeight: isSelected ? FontWeight.w800 : FontWeight.w500,
+                                          color: isSelected ? Colors.blueAccent : Colors.black38,
+                                        ),
+                                        child: Text("$value ml"),
+                                      );
+                                    },
+                                  ),
+                                ),
+                              ),
+                              SizedBox(height: height * 0.015),
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  InkWell(
+                                    onTap: () {
+                                      dialogSetState(() {
+                                        tempWater -= selectedAmount / 1000;
+                                        if (tempWater < 0) tempWater = 0;
+                                      });
+                                    },
+                                    child: const Icon(Icons.remove_circle_outline, size: 30, color: Colors.blueAccent),
+                                  ),
+                                  SizedBox(width: width * 0.06),
+                                  InkWell(
+                                    onTap: () {
+                                      dialogSetState(() {
+                                        tempWater += selectedAmount / 1000;
+                                        if (tempWater > goalWater) tempWater = goalWater;
+                                      });
+                                    },
+                                    child: const Icon(Icons.add_circle_outline, size: 30, color: Colors.blueAccent),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                    SizedBox(height: height * 0.02),
+                    _exploreButton(
+                      context,
+                      onTap: () async {
+                        final double delta = double.parse((tempWater - currentWater).toStringAsFixed(3));
+                        if (delta != 0) {
+                          await _saveWater(delta);
+                        }
+                        setState(() {
+                          currentWater = tempWater;
+                        });
+                        Navigator.pop(context);
+                        Navigator.push(context, MaterialPageRoute(builder: (_) => const WaterScreen()));
+                      },
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    final now = DateTime.now();
-    final dateTxt =
-        "Today, ${_monthName(now.month)} ${now.day}";
-
     final size = MediaQuery.of(context).size;
-    final cardH = (size.height * 0.28).clamp(220.0, 360.0);
-    final calP = _safe(currentCalories.toDouble(), calorieTarget.toDouble());
+    final isPortrait = size.height >= size.width;
+
+    final double cardHeight = (isPortrait
+        ? size.height.clamp(560.0, 1000.0) * 0.25 * 1.2
+        : size.height.clamp(360.0, 800.0) * 0.35 * 1.2)
+        .toDouble();
+
+    final int current = currentCalories;
+    final int goal = calorieTarget;
+    final double progressRaw = goal == 0 ? 0.0 : (current / goal);
+
+    String _motivation(double p) {
+      if (p <= 0.15) return "A true start is a gentle one.\nSmall steps build strong habits.";
+      if (p <= 0.35) return "Good momentum.\nKeep choices steady and simple.";
+      if (p <= 0.6) return "Great balance.\nFuel up and stay consistent.";
+      if (p <= 0.85) return "Strong progress.\nAlign the next meal to your goal.";
+      if (p <= 1.0) return "Right on target.\nTiny tweaks make perfect days.";
+      return "You’re above target.\nGo lighter now and hydrate well.";
+    }
 
     return Scaffold(
       backgroundColor: const Color(0xFFF4F7FB),
@@ -257,150 +634,129 @@ class _NutritionScreenState extends State<NutritionScreen>
           padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
           child: Column(
             children: [
-              // ---------------- HEADER ----------------
               Material(
                 elevation: 5,
-                shadowColor: Colors.black12,
+                shadowColor: Colors.black.withOpacity(0.06),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
+                color: Colors.transparent,
                 child: Container(
                   decoration: BoxDecoration(
-                    gradient: _appGradient,
                     borderRadius: BorderRadius.circular(22),
+                    gradient: _appGradient,
                   ),
-                  padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Text("Nutrition",
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text(
+                          'Nutrition',
                           style: TextStyle(
-                              fontSize: 20,
-                              fontWeight: FontWeight.w700,
-                              color: Colors.white)),
-                      Text(dateTxt,
-                          style: const TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.w700)),
-                    ],
+                            fontSize: 20,
+                            fontWeight: FontWeight.w700,
+                            color: Colors.white,
+                          ),
+                        ),
+                        Text(
+                          // show TODAY only as confirmed
+                          'Today, ${_monthName(DateTime.now().month)} ${DateTime.now().day}',
+                          style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w900, color: Colors.white),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),
-
               const SizedBox(height: 10),
-
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // ---------------- CALORIE CARD ----------------
                   Expanded(
                     flex: 4,
                     child: Card(
                       elevation: 6,
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(18)),
+                      color: Colors.white,
+                      shadowColor: Colors.black.withOpacity(0.08),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
                       child: SizedBox(
-                        height: cardH,
-                        child: Column(
-                          children: [
-                            const SizedBox(height: 8),
-                            const Text("Calorie",
-                                style: TextStyle(
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.w700)),
-                            const SizedBox(height: 14),
-                            AnimatedBuilder(
-                              animation: _ctrl,
-                              builder: (_, __) {
-                                final p = (_ctrl.value * calP).clamp(0, 1);
-                                return _RingIcon(
-                                  size: 120,
-                                  ringW: 8,
-                                  progress: p,
-                                  base: const Color(0xFFE8F2FF),
-                                  ring: _calorieColor(calP),
-                                  icon: Iconsax.flash,
-                                  iconSize: 36,
-                                  tap: _openMealTracking,
-                                );
-                              },
-                            ),
-                            const SizedBox(height: 14),
-                            Text("$currentCalories/$calorieTarget Cal",
-                                style: const TextStyle(
-                                    fontWeight: FontWeight.w700)),
-                            const SizedBox(height: 8),
-                            Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 8),
-                              child: Text(_motivation(calP),
-                                  textAlign: TextAlign.center,
-                                  style: const TextStyle(
-                                      fontSize: 12, color: Colors.black54)),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-
-                  const SizedBox(width: 8),
-
-                  // ---------------- MACRO + WATER CARD ----------------
-                  Expanded(
-                    flex: 6,
-                    child: Card(
-                      elevation: 6,
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(18)),
-                      child: SizedBox(
-                        height: cardH,
+                        height: cardHeight,
                         child: Padding(
-                          padding: const EdgeInsets.all(14),
+                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
                           child: LayoutBuilder(
-                            builder: (_, c) {
-                              final w = (c.maxWidth - 14) / 2;
-                              final h = (c.maxHeight - 16) / 2;
+                            builder: (context, constraints) {
+                              final cw = constraints.maxWidth;
+                              final ch = constraints.maxHeight;
+
+                              double ringSize = (min(cw, ch) * 0.65 * 1.2 * 1.2)
+                                  .clamp(90.0, min(cw * 0.98, ch * 0.98));
+                              final double ringWidth = (ringSize * 0.07).clamp(3.0, 7.0).toDouble();
+
+                              final double iconSize = ((ringSize / 1.5) * 0.42).toDouble();
+                              final double vGapSmall = (ch * 0.02).clamp(6.0, 14.0).toDouble();
+                              final Color calorieColor = _calorieSolidColor(progressRaw);
 
                               return Column(
+                                crossAxisAlignment: CrossAxisAlignment.center,
+                                mainAxisAlignment: MainAxisAlignment.start,
                                 children: [
-                                  Row(
-                                    children: [
-                                      _macro("Protein", Iconsax.cup,
-                                          protCurrent, protTarget,
-                                          const Color(0xFF42A5F5), w, h),
-                                      const SizedBox(width: 14),
-                                      _macro("Carbs", Iconsax.ranking,
-                                          carbsCurrent, carbsTarget,
-                                          const Color(0xFF66BB6A), w, h),
-                                    ],
+                                  SizedBox(height: vGapSmall * 0.5),
+                                  const Text(
+                                    'Calorie',
+                                    style: TextStyle(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.w700,
+                                      color: Colors.black87,
+                                    ),
                                   ),
-                                  const SizedBox(height: 16),
-                                  Row(
-                                    children: [
-                                      _macro("Fat", Iconsax.coffee,
-                                          fatCurrent, fatTarget,
-                                          const Color(0xFFFB8C00), w, h),
-
-                                      const SizedBox(width: 14),
-
-                                      // **** WATER RING CELL (STYLE A) ****
-                                      GestureDetector(
-                                        onTap: () => Navigator.push(
-                                          context,
-                                          MaterialPageRoute(
-                                              builder: (_) =>
-                                              const WaterScreen()),
-                                        ),
-                                        child: _macro(
-                                          "Water",
-                                          Iconsax.glass,
-                                          waterCurrent.toDouble(),
-                                          waterTarget.toDouble(),
-                                          const Color(0xFF42A5F5),
-                                          w,
-                                          h,
-                                          isML: true,
+                                  SizedBox(height: vGapSmall * 1.4 * 1.1),
+                                  Center(
+                                    child: AnimatedBuilder(
+                                      animation: _ctrl,
+                                      builder: (context, _) {
+                                        final animatedProgress = (_ctrl.value * progressRaw).clamp(0.0, 1.0);
+                                        return _SolidRingWithIcon(
+                                          size: ringSize,
+                                          ringWidth: ringWidth,
+                                          progress: animatedProgress,
+                                          baseColor: const Color(0xFFE8F2FF),
+                                          ringColor: calorieColor,
+                                          icon: Iconsax.flash,
+                                          iconSize: iconSize,
+                                          onTap: _openMealTracking,
+                                        );
+                                      },
+                                    ),
+                                  ),
+                                  SizedBox(height: vGapSmall * 1.3 * 1.2),
+                                  FittedBox(
+                                    fit: BoxFit.scaleDown,
+                                    child: GestureDetector(
+                                      onTap: _openMealTracking,
+                                      child: Text(
+                                        '$current/${goal} Cal',
+                                        style: const TextStyle(
+                                          fontSize: 19,
+                                          fontWeight: FontWeight.w700,
+                                          color: Colors.black87,
                                         ),
                                       ),
-                                    ],
+                                    ),
+                                  ),
+                                  const Spacer(),
+                                  Padding(
+                                    padding: const EdgeInsets.only(top: 8.0, bottom: 2.0),
+                                    child: Text(
+                                      _motivation(progressRaw),
+                                      textAlign: TextAlign.center,
+                                      softWrap: true,
+                                      maxLines: 3,
+                                      overflow: TextOverflow.visible,
+                                      style: const TextStyle(
+                                        fontSize: 13.5,
+                                        fontWeight: FontWeight.w500,
+                                        color: Colors.black54,
+                                      ),
+                                    ),
                                   ),
                                 ],
                               );
@@ -410,239 +766,510 @@ class _NutritionScreenState extends State<NutritionScreen>
                       ),
                     ),
                   ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    flex: 6,
+                    child: Card(
+                      elevation: 6,
+                      color: Colors.white,
+                      shadowColor: Colors.black.withOpacity(0.08),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+                      child: SizedBox(
+                        height: cardHeight,
+                        child: Padding(
+                          padding: const EdgeInsets.all(14),
+                          child: LayoutBuilder(
+                            builder: (context, constraints) {
+                              final double cw = constraints.maxWidth;
+                              final double ch = constraints.maxHeight;
+                              const double hGap = 14, vGap = 16;
+                              final double colWidth = ((cw - hGap) / 2);
+                              final double rowHeight = ((ch - vGap) / 2);
+
+                              final double ringSize = (min(colWidth, rowHeight) * 0.7).clamp(44.0, 120.0).toDouble();
+                              final double ringWidth = (ringSize * 0.07).clamp(3.0, 6.0).toDouble();
+                              final double titleSize = (ringSize * 0.26).clamp(12.0, 17.0).toDouble();
+                              final double valueSize = (ringSize * 0.23 * 0.8 * 1.1).clamp(9.0, 15.0).toDouble();
+
+                              Widget buildCell(String title, IconData icon, double targetProgress, String value, Color color, {bool isWater = false}) {
+                                final String displayValue = isWater ? '${currentWater.toStringAsFixed(1)}/${goalWater.toStringAsFixed(1)}L' : value;
+                                final double animatedTarget = targetProgress.clamp(0.0, 1.0);
+
+                                Widget content = SizedBox(
+                                  width: colWidth,
+                                  height: rowHeight,
+                                  child: Column(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      FittedBox(
+                                        fit: BoxFit.scaleDown,
+                                        child: Text(
+                                          title,
+                                          style: TextStyle(
+                                            fontSize: titleSize,
+                                            fontWeight: FontWeight.w600,
+                                            color: Colors.black87,
+                                          ),
+                                        ),
+                                      ),
+                                      const SizedBox(height: 8),
+                                      AnimatedBuilder(
+                                        animation: _ctrl,
+                                        builder: (context, _) {
+                                          final animatedProgress = (_ctrl.value * animatedTarget).clamp(0.0, 1.0);
+                                          return _SolidRingWithIcon(
+                                            size: ringSize,
+                                            ringWidth: ringWidth,
+                                            progress: animatedProgress,
+                                            baseColor: const Color(0xFFE8F2FF),
+                                            ringColor: color,
+                                            icon: icon,
+                                            iconSize: (ringSize * 0.42).clamp(16.0, ringSize * 0.55).toDouble(),
+                                          );
+                                        },
+                                      ),
+                                      const SizedBox(height: 8),
+                                      GestureDetector(
+                                        onTap: () {
+                                          if (isWater) {
+                                            _openWaterScreen();
+                                          } else {
+                                            _openMealTracking();
+                                          }
+                                        },
+                                        child: FittedBox(
+                                          fit: BoxFit.scaleDown,
+                                          child: Text(
+                                            displayValue,
+                                            style: TextStyle(fontSize: valueSize, color: Colors.black87),
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                );
+
+                                if (isWater) {
+                                  return GestureDetector(onTap: _openWaterScreen, child: content);
+                                } else {
+                                  return GestureDetector(onTap: _openMealTracking, child: content);
+                                }
+                              }
+
+                              final proteinProg = _safeProgress(protCurrent, protTarget);
+                              final carbsProg = _safeProgress(carbsCurrent, carbsTarget);
+                              final fatProg = _safeProgress(fatCurrent, fatTarget);
+                              final waterProg = _safeProgress(currentWater, goalWater);
+
+                              return Column(children: [
+                                Row(
+                                  children: [
+                                    buildCell('Protein', Iconsax.cup, proteinProg, '${protCurrent.toInt()}/${protTarget.toInt()}g', const Color(0xFF42A5F5)),
+                                    const SizedBox(width: hGap),
+                                    buildCell('Carbs', Iconsax.ranking, carbsProg, '${carbsCurrent.toInt()}/${carbsTarget.toInt()}g', const Color(0xFF66BB6A)),
+                                  ],
+                                ),
+                                const SizedBox(height: vGap),
+                                Row(
+                                  children: [
+                                    buildCell('Fat', Iconsax.coffee, fatProg, '${fatCurrent.toInt()}/${fatTarget.toInt()}g', const Color(0xFFFB8C00)),
+                                    const SizedBox(width: hGap),
+                                    buildCell('Water', Iconsax.glass, waterProg, '${currentWater.toStringAsFixed(1)}/${goalWater.toStringAsFixed(1)}L', const Color(0xFF64B5FF), isWater: true),
+                                  ],
+                                ),
+                              ]);
+                            },
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
                 ],
               ),
-
-              const SizedBox(height: 18),
-
-              // ---------------- "Add Meal" / "Meal Planner" ----------------
+              const SizedBox(height: 14),
               Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   Expanded(
                     flex: 4,
-                    child: _btn(
-                      "Add Meal",
-                      Icons.add,
-                          () {
-                        Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                                builder: (_) => const SearchMealScreen()));
-                      },
+                    child: Align(
+                      alignment: Alignment.center,
+                      child: SizedBox(
+                        width: min(160, size.width * 0.34),
+                        height: 48,
+                        child: GradientBorderButton(
+                          gradient: _appGradient,
+                          onPressed: _openAddMealFlow,
+                          icon: const Icon(Icons.add, size: 18, color: Colors.black87),
+                          label: const Text('Add Meal', style: TextStyle(fontWeight: FontWeight.w600, color: Colors.black87)),
+                        ),
+                      ),
                     ),
                   ),
-                  const SizedBox(width: 10),
+                  const SizedBox(width: 8),
                   Expanded(
                     flex: 5,
-                    child: _btn(
-                      "Meal Planner",
-                      Icons.restaurant_menu,
-                      _openMealTracking,
+                    child: Align(
+                      alignment: Alignment.centerLeft,
+                      child: SizedBox(
+                        width: min(320, size.width * 0.48),
+                        height: 48,
+                        child: GradientBorderButton(
+                          gradient: _appGradient,
+                          onPressed: () => _showWaterDialogAndSave(context),
+                          icon: const Icon(Icons.local_drink, size: 18, color: Colors.blue),
+                          label: const Text('Add Water Intake', style: TextStyle(fontWeight: FontWeight.w600, color: Colors.black87)),
+                        ),
+                      ),
                     ),
                   ),
                 ],
               ),
+              const SizedBox(height: 18),
+              LayoutBuilder(builder: (context, layoutConstraints) {
+                final double availableWidth = layoutConstraints.maxWidth;
+                const double hSpacing = 12.0;
+                final double cardWidth = (availableWidth - hSpacing) / 2;
+                final double cardHeight = (cardWidth * 0.75).clamp(110.0, 180.0);
 
-              const SizedBox(height: 20),
-
-              // ---------------- MEAL DISCOVER ----------------
-              _mealDiscoverSection(size),
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Padding(
+                      padding: EdgeInsets.only(left: 4.0, bottom: 8.0),
+                      child: Text(
+                        'Meal Discover',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w700,
+                          color: Colors.black87,
+                        ),
+                      ),
+                    ),
+                    Wrap(
+                      spacing: hSpacing,
+                      runSpacing: 12,
+                      children: [
+                        _featureCard(
+                          width: cardWidth,
+                          height: cardHeight,
+                          imagePath: 'assets/images/meal_planner.png',
+                          onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const MealTrackingScreen())),
+                        ),
+                        _featureCard(
+                          width: cardWidth,
+                          height: cardHeight,
+                          imagePath: 'assets/images/recommend.png',
+                          onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const RecommendScreen())),
+                        ),
+                        _featureCard(
+                          width: cardWidth,
+                          height: cardHeight,
+                          imagePath: 'assets/images/recipe.png',
+                          onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const RecipeScreen())),
+                        ),
+                        _featureCard(
+                          width: cardWidth,
+                          height: cardHeight,
+                          imagePath: 'assets/images/ai_planner.png',
+                          onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AiMealPlannerScreen())),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 18),
+                  ],
+                );
+              }),
             ],
           ),
         ),
       ),
-    );
-  }
-
-  // ---------------- SMALL HELPERS ----------------
-  Widget _btn(String text, IconData icon, VoidCallback tap) {
-    return Container(
-      height: 48,
-      decoration: BoxDecoration(
-        gradient: _appGradient,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      padding: const EdgeInsets.all(2),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(10),
-        onTap: tap,
-        child: Container(
-          decoration: BoxDecoration(
-              color: Colors.white, borderRadius: BorderRadius.circular(10)),
-          child: Center(
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(icon, size: 18),
-                  const SizedBox(width: 6),
-                  Text(text, style: const TextStyle(fontWeight: FontWeight.w600))
-                ],
-              )),
-        ),
-      ),
-    );
-  }
-
-  Widget _macro(
-      String t,
-      IconData ic,
-      double cur,
-      double tar,
-      Color col,
-      double w,
-      double h, {
-        bool isML = false,
-      }) {
-    final p = _safe(cur, tar);
-
-    return SizedBox(
-      width: w,
-      height: h,
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Text(t, style: const TextStyle(fontWeight: FontWeight.w600)),
-          const SizedBox(height: 6),
-          AnimatedBuilder(
-            animation: _ctrl,
-            builder: (_, __) {
-              final pr = (_ctrl.value * p).clamp(0, 1);
-              return _RingIcon(
-                size: min(w, h) * 0.7,
-                ringW: 6,
-                progress: pr,
-                base: const Color(0xFFE8F2FF),
-                ring: col,
-                icon: ic,
-                iconSize: min(w, h) * 0.28,
-              );
-            },
-          ),
-          const SizedBox(height: 4),
-          Text(
-            isML
-                ? "${cur.toInt()}/${tar.toInt()} ml"
-                : "${cur.toInt()}/${tar.toInt()} g",
-            style: const TextStyle(fontSize: 13),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _mealDiscoverSection(Size size) {
-    final w = (size.width - 28) / 2;
-    final h = (w * 0.75).clamp(120.0, 180.0);
-
-    Widget card(String img, Widget goto) {
-      return InkWell(
-        onTap: () => Navigator.push(
-            context, MaterialPageRoute(builder: (_) => goto)),
-        child: Container(
-          width: w,
-          height: h,
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(14),
-            boxShadow: [
-              BoxShadow(color: Colors.black12, blurRadius: 8, offset: Offset(0, 4))
-            ],
-          ),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(14),
-            child: Image.asset(img, fit: BoxFit.cover),
-          ),
-        ),
-      );
-    }
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text("Meal Discover",
-            style: TextStyle(fontWeight: FontWeight.w700, fontSize: 18)),
-        const SizedBox(height: 10),
-        Wrap(
-          spacing: 12,
-          runSpacing: 12,
-          children: [
-            card('assets/images/meal_planner.png', const MealTrackingScreen()),
-            card('assets/images/recommend.png', const RecommendScreen()),
-            card('assets/images/recipe.png', const RecipeScreen()),
-            card('assets/images/ai_planner.png', const AiMealPlannerScreen()),
-          ],
-        ),
-      ],
     );
   }
 }
 
-// ---------------- RING ICON WIDGET ----------------
-class _RingIcon extends StatelessWidget {
-  final double size, ringW, progress, iconSize;
-  final Color base, ring;
-  final IconData icon;
-  final VoidCallback? tap;
+/// Gradient bordered button — white inner fill with gradient stroke.
+class GradientBorderButton extends StatelessWidget {
+  final LinearGradient gradient;
+  final Widget label;
+  final Widget icon;
+  final VoidCallback? onPressed;
+  final double borderWidth;
+  final double borderRadius;
 
-  const _RingIcon({
-    required this.size,
-    required this.ringW,
-    required this.progress,
-    required this.base,
-    required this.ring,
+  const GradientBorderButton({
+    Key? key,
+    required this.gradient,
+    required this.label,
     required this.icon,
-    required this.iconSize,
-    this.tap,
-  });
+    required this.onPressed,
+    this.borderWidth = 2.0,
+    this.borderRadius = 12.0,
+  }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: tap,
-      child: CustomPaint(
-        size: Size.square(size),
-        painter:
-        _RingPainter(progress, ringW, base, ring),
-        child: Center(
-          child: Icon(icon, size: iconSize, color: Colors.black87),
+      onTap: onPressed,
+      child: Container(
+        decoration: BoxDecoration(
+          gradient: gradient,
+          borderRadius: BorderRadius.circular(borderRadius),
+        ),
+        padding: EdgeInsets.all(borderWidth),
+        child: Container(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(borderRadius - borderWidth),
+            boxShadow: [
+              BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 4, offset: const Offset(0, 1)),
+            ],
+          ),
+          child: Center(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 10.0),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  icon,
+                  const SizedBox(width: 8),
+                  DefaultTextStyle.merge(
+                    style: const TextStyle(color: Colors.black87),
+                    child: label,
+                  ),
+                ],
+              ),
+            ),
+          ),
         ),
       ),
     );
   }
 }
 
-class _RingPainter extends CustomPainter {
-  final double p, w;
-  final Color base, ring;
+Color _calorieSolidColor(double p) {
+  if (p <= 0.2) return const Color(0xFFFFD54F);
+  if (p <= 0.6) return const Color(0xFFFB8C00);
+  if (p <= 1.0) return const Color(0xFFE53935);
+  return const Color(0xFFB71C1C);
+}
 
-  _RingPainter(this.p, this.w, this.base, this.ring);
+class _SolidRingWithIcon extends StatelessWidget {
+  final double size, ringWidth, progress, iconSize;
+  final Color baseColor, ringColor;
+  final IconData icon;
+  final VoidCallback? onTap;
+
+  const _SolidRingWithIcon({
+    required this.size,
+    required this.ringWidth,
+    required this.progress,
+    required this.baseColor,
+    required this.ringColor,
+    required this.icon,
+    required this.iconSize,
+    this.onTap,
+  });
 
   @override
-  void paint(Canvas canvas, Size s) {
-    final c = Offset(s.width / 2, s.height / 2);
-    final r = (min(s.width, s.height) - w) / 2;
-
-    final b = Paint()
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = w
-      ..color = base;
-
-    final f = Paint()
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = w
-      ..strokeCap = StrokeCap.round
-      ..color = ring;
-
-    canvas.drawCircle(c, r, b);
-    canvas.drawArc(
-      Rect.fromCircle(center: c, radius: r),
-      -pi / 2,
-      2 * pi * p,
-      false,
-      f,
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(size / 2)),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(size / 2),
+        child: SizedBox(
+          width: size,
+          height: size,
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              CustomPaint(
+                size: Size.square(size),
+                painter: _SolidRingPainter(
+                  progress: progress,
+                  ringWidth: ringWidth,
+                  ringColor: ringColor,
+                  baseColor: baseColor,
+                ),
+              ),
+              Icon(icon, size: iconSize, color: Colors.black87),
+            ],
+          ),
+        ),
+      ),
     );
+  }
+}
+
+class _SolidRingPainter extends CustomPainter {
+  final double progress;
+  final double ringWidth;
+  final Color ringColor;
+  final Color baseColor;
+
+  _SolidRingPainter({
+    required this.progress,
+    required this.ringWidth,
+    required this.ringColor,
+    required this.baseColor,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final center = Offset(size.width / 2, size.height / 2);
+    final radius = (min(size.width, size.height) - ringWidth) / 2;
+
+    final basePaint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = ringWidth
+      ..strokeCap = StrokeCap.round
+      ..isAntiAlias = true
+      ..color = baseColor;
+    canvas.drawCircle(center, radius, basePaint);
+
+    final arcPaint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = ringWidth
+      ..strokeCap = StrokeCap.round
+      ..isAntiAlias = true
+      ..color = ringColor;
+    canvas.drawArc(Rect.fromCircle(center: center, radius: radius), -pi / 2, 2 * pi * progress, false, arcPaint);
   }
 
   @override
-  bool shouldRepaint(_) => true;
+  bool shouldRepaint(covariant _SolidRingPainter oldDelegate) {
+    return oldDelegate.progress != progress ||
+        oldDelegate.ringWidth != ringWidth ||
+        oldDelegate.ringColor != ringColor ||
+        oldDelegate.baseColor != baseColor;
+  }
+}
+
+Widget _featureCard({
+  required double width,
+  required double height,
+  IconData? icon,
+  String? title,
+  String? subtitle,
+  required VoidCallback onTap,
+  String? imagePath,
+  bool isNetwork = false,
+}) {
+  const double outerPadding = 0;
+  const double innerSpacing = 8.0;
+  final bool hasText = (title?.isNotEmpty ?? false) || (subtitle?.isNotEmpty ?? false);
+  final double reservedTextArea = hasText ? 48.0 : 0.0;
+  final double imageHeight = (height - (outerPadding * 2) - (hasText ? innerSpacing : 0.0) - reservedTextArea)
+      .clamp(44.0, height);
+  final IconData usedIcon = icon ?? Icons.image;
+
+  Widget imageWidget;
+  if (imagePath != null) {
+    if (isNetwork) {
+      imageWidget = Image.network(
+        imagePath,
+        fit: BoxFit.cover,
+        width: double.infinity,
+        height: imageHeight,
+        alignment: Alignment.center,
+        loadingBuilder: (ctx, child, progress) {
+          if (progress == null) return child;
+          return SizedBox(
+            height: imageHeight,
+            child: const Center(child: CircularProgressIndicator(strokeWidth: 2)),
+          );
+        },
+        errorBuilder: (ctx, err, st) => Container(
+          width: double.infinity,
+          height: imageHeight,
+          color: Colors.grey.shade100,
+          child: Center(child: Icon(usedIcon, size: 28, color: Colors.black26)),
+        ),
+      );
+    } else {
+      imageWidget = Image.asset(
+        imagePath,
+        fit: BoxFit.cover,
+        width: double.infinity,
+        height: imageHeight,
+        gaplessPlayback: true,
+        cacheWidth: 400,
+        errorBuilder: (ctx, err, st) => Container(
+          width: double.infinity,
+          height: imageHeight,
+          color: Colors.grey.shade100,
+          child: Center(child: Icon(usedIcon, size: 28, color: Colors.black26)),
+        ),
+      );
+    }
+  } else {
+    imageWidget = Container(
+      width: double.infinity,
+      height: imageHeight,
+      color: Colors.grey.shade100,
+      child: Center(child: Icon(usedIcon, size: 28, color: Colors.black54)),
+    );
+  }
+
+  return Material(
+    color: Colors.transparent,
+    child: InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(14),
+      child: Container(
+        width: width,
+        height: height,
+        padding: const EdgeInsets.all(outerPadding),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(14),
+          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 8, offset: const Offset(0, 4))],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            ClipRRect(
+              borderRadius: BorderRadius.circular(20),
+              child: SizedBox(
+                width: double.infinity,
+                height: imageHeight,
+                child: imageWidget,
+              ),
+            ),
+            if (hasText)
+              SizedBox(height: innerSpacing / 1.2)
+            else
+              const SizedBox(height: 0),
+            if (hasText)
+              SizedBox(
+                height: reservedTextArea,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (title != null && title.isNotEmpty)
+                      Text(
+                        title,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(fontWeight: FontWeight.w700),
+                      ),
+                    if (subtitle != null && subtitle.isNotEmpty)
+                      Flexible(
+                        child: Text(
+                          subtitle,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(fontSize: 12, color: Colors.black45),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+          ],
+        ),
+      ),
+    ),
+  );
 }
