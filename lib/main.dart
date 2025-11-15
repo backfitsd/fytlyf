@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'package:firebase_app_check/firebase_app_check.dart'; // ✅ Added for App Check
-import 'package:flutter/services.dart'; // ✅ Needed to hide status bar
+import 'package:firebase_app_check/firebase_app_check.dart';
+import 'package:flutter/services.dart';
 import 'src/firebase_options.dart';
 import 'src/app.dart';
+
+// ⭐ Add Nutrition Database import
+import 'src/features/dashboard/nutritions/services/nutrition_database.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -12,7 +15,7 @@ Future<void> main() async {
   // ✅ Hide Status Bar for the entire app
   SystemChrome.setEnabledSystemUIMode(
     SystemUiMode.manual,
-    overlays: [], // 🔥 Removes status bar & nav bar
+    overlays: [],
   );
 
   // ✅ Initialize Firebase
@@ -20,11 +23,14 @@ Future<void> main() async {
     options: DefaultFirebaseOptions.currentPlatform,
   );
 
-  // ✅ Initialize Firebase App Check with Play Integrity (Android) and DeviceCheck (iOS)
+  // ✅ Initialize Firebase App Check
   await FirebaseAppCheck.instance.activate(
     androidProvider: AndroidProvider.playIntegrity,
     appleProvider: AppleProvider.deviceCheck,
   );
+
+  // ⭐ Initialize Nutrition Database (JSON download + cache)
+  await NutritionDatabase.init();
 
   // ✅ Launch the main app
   runApp(const ProviderScope(child: FytLyfApp()));
