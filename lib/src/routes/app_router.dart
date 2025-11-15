@@ -23,7 +23,7 @@ import '../features/onboarding/progress_graph_screen.dart' show ProgressGraphScr
 
 final GoRouter appRouter = GoRouter(
   // ✅ Root route now starts from Splash Screen
-  initialLocation: '/splash',
+  initialLocation: '/dashboard-root',
   routes: [
     // ✅ Splash
     GoRoute(
