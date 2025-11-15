@@ -135,4 +135,72 @@ service cloud.firestore {
   }
 }
 
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isAuth() {
+      return request.auth != null;
+    }
+
+    function isOwner(uid) {
+      return isAuth() && request.auth.uid == uid;
+    }
+
+    // -------------------------------------------------------
+    // USERS ROOT DOCUMENT
+    // -------------------------------------------------------
+    match /users/{uid} {
+
+      // User can read & write ONLY their own root profile
+      allow read, write: if isOwner(uid);
+
+      // ---------------------------------------------------
+      // USER MEALS: users/{uid}/meals/{date}/{mealName}/{docId}
+      // ---------------------------------------------------
+      match /meals/{date} {
+        allow read, write: if isOwner(uid);
+
+        match /{mealName}/{docId} {
+          allow read, write: if isOwner(uid);
+        }
+      }
+
+      // ---------------------------------------------------
+      // CUSTOM FOODS: users/{uid}/customFoods/{docId}
+      // ---------------------------------------------------
+      match /customFoods/{docId} {
+        allow read, write: if isOwner(uid);
+      }
+
+      // ---------------------------------------------------
+      // WATER LOGS: users/{uid}/water_logs/{date}
+      // ---------------------------------------------------
+      match /water_logs/{date} {
+        allow read, write: if isOwner(uid);
+      }
+    }
+
+    // -------------------------------------------------------
+    // PUBLIC USERNAMES
+    // -------------------------------------------------------
+    match /usernames/{username} {
+      allow read: if true;
+
+      allow create: if isAuth()
+                    && request.resource.data.uid == request.auth.uid;
+
+      allow update: if false; // No username update
+      allow delete: if false;
+    }
+
+    // Everything else → read only
+    match /{doc=**} {
+      allow read: if true;
+      allow write: if false;
+    }
+  }
+}
+
 

@@ -1,66 +1,78 @@
+// file: lib/src/features/dashboard/nutritions/services/nutrition_database.dart
+// Local JSON nutrition database loader + search engine.
+// Exposes init(), loadDatabase(), search(), foodById()
+
 import 'dart:convert';
-import 'dart:io';
-import 'package:flutter/foundation.dart';
-import 'package:http/http.dart' as http;
-import 'package:path_provider/path_provider.dart';
+import 'package:flutter/services.dart' show rootBundle;
 
 class NutritionDatabase {
-  static const String remoteUrl = "https://firebasestorage.googleapis.com/v0/b/fytlyf-production-realtime.firebasestorage.app/o/nutrition%2Fnutrition_10000.json?alt=media&token=a84e1d82-f44d-47ee-a0e0-aedcb71a7a32";
+  static List<Map<String, dynamic>> _foods = [];
+  static bool _loaded = false;
 
-  static List<dynamic> _foods = [];
+  /// Backwards-compatible initializer used in main.dart
+  /// You can call either NutritionDatabase.init() or NutritionDatabase.loadDatabase()
+  static Future<void> init() async => loadDatabase();
 
-  static bool initialized = false;
-
-  static Future<void> init() async {
-    if (initialized) return;
-    initialized = true;
-
-    final dir = await getApplicationDocumentsDirectory();
-    final file = File("${dir.path}/nutrition.json");
-
-    // Load local cache first (fast)
-    if (await file.exists()) {
-      try {
-        final text = await file.readAsString();
-        _foods = json.decode(text);
-        debugPrint("Nutrition DB loaded locally (${_foods.length} items)");
-      } catch (_) {}
-    }
-
-    // Download latest version (async update)
+  /// Load the JSON file from assets and parse into memory.
+  static Future<void> loadDatabase() async {
+    if (_loaded) return;
     try {
-      final response = await http.get(Uri.parse(remoteUrl));
-      if (response.statusCode == 200) {
-        await file.writeAsString(response.body);
-        _foods = json.decode(response.body);
-        debugPrint("Nutrition DB updated from cloud (${_foods.length} items)");
-      }
+      final jsonStr = await rootBundle.loadString('assets/data/nutrition.json');
+      final List parsed = json.decode(jsonStr) as List;
+      _foods = parsed.map<Map<String, dynamic>>((e) {
+        return Map<String, dynamic>.from(e as Map);
+      }).toList();
     } catch (e) {
-      debugPrint("Nutrition DB fetch error: $e");
+      // If load fails, keep empty but mark loaded to avoid repeated attempts
+      _foods = [];
+    } finally {
+      _loaded = true;
     }
   }
 
-  /// Fuzzy search (D2): startsWith priority + substring
-  static List<Map<String, dynamic>> search(String query, {int limit = 50}) {
-    final q = query.trim().toLowerCase();
+  /// Fast case-insensitive search by name (partial match)
+  static Future<List<Map<String, dynamic>>> search(String query, {int limit = 50}) async {
+    if (!_loaded) await loadDatabase();
+    final q = query.toLowerCase().trim();
     if (q.isEmpty) return [];
-
-    final List<Map<String, dynamic>> results = [];
-
-    for (var item in _foods) {
-      final name = (item["name"] ?? "").toString().toLowerCase();
-
-      if (name.startsWith(q)) {
-        results.insert(0, Map<String, dynamic>.from(item));
-      } else if (name.contains(q)) {
-        results.add(Map<String, dynamic>.from(item));
+    final results = <Map<String, dynamic>>[];
+    for (final item in _foods) {
+      final name = (item['name'] ?? '').toString().toLowerCase();
+      if (name.contains(q)) {
+        results.add(item);
+        if (results.length >= limit) break;
       }
-
-      if (results.length >= limit) break;
     }
-
     return results;
   }
 
-  static List<dynamic> get all => _foods;
+  /// Return all foods (rarely needed)
+  static Future<List<Map<String, dynamic>>> allFoods() async {
+    if (!_loaded) await loadDatabase();
+    return _foods;
+  }
+
+  /// Find a food by its numeric id
+  static Map<String, dynamic>? foodById(dynamic id) {
+    if (!_loaded) {
+      // Not awaited here to keep API sync — caller should call init() at app start
+      // but also be defensive and do a linear search (may return null)
+    }
+    if (id == null) return null;
+    try {
+      // support string or num id
+      if (id is String) {
+        final intId = int.tryParse(id);
+        if (intId != null) {
+          return _foods.firstWhere((e) => (e['id'] is num ? (e['id'] as num).toInt() : e['id']) == intId, orElse: () => {});
+        }
+      } else if (id is num) {
+        final intId = id.toInt();
+        return _foods.firstWhere((e) => (e['id'] is num ? (e['id'] as num).toInt() : e['id']) == intId, orElse: () => {});
+      } else if (id is int) {
+        return _foods.firstWhere((e) => (e['id'] is num ? (e['id'] as num).toInt() : e['id']) == id, orElse: () => {});
+      }
+    } catch (_) {}
+    return null;
+  }
 }
